@@ -24,7 +24,9 @@
           },
           {
             "group": "ガイド",
-            "pages": ["tools/stormworks/physics-codegen/guides/frames"]
+            "pages": [
+              "tools/stormworks/physics-codegen/guides/frames"
+            ]
           },
           {
             "group": "リファレンス",
@@ -37,7 +39,9 @@
           },
           {
             "group": "FAQ",
-            "pages": ["tools/stormworks/physics-codegen/faq"]
+            "pages": [
+              "tools/stormworks/physics-codegen/faq"
+            ]
           }
         ]
       },
@@ -74,7 +78,9 @@
           },
           {
             "group": "FAQ・トラブルシューティング",
-            "pages": ["tools/stormworks/codec-compiler/faq"]
+            "pages": [
+              "tools/stormworks/codec-compiler/faq"
+            ]
           }
         ]
       },
@@ -110,7 +116,9 @@
           },
           {
             "group": "FAQ・トラブルシューティング",
-            "pages": ["tools/stormworks/stormmin/faq"]
+            "pages": [
+              "tools/stormworks/stormmin/faq"
+            ]
           }
         ]
       },
@@ -124,7 +132,9 @@
             "groups": [
               {
                 "group": "はじめに",
-                "pages": ["tools/stormworks/storm-editor/studio/index"]
+                "pages": [
+                  "tools/stormworks/storm-editor/studio/index"
+                ]
               }
             ]
           },
@@ -133,7 +143,9 @@
             "groups": [
               {
                 "group": "はじめに",
-                "pages": ["tools/stormworks/storm-editor/draft/index"]
+                "pages": [
+                  "tools/stormworks/storm-editor/draft/index"
+                ]
               }
             ]
           }
@@ -146,7 +158,38 @@
         "groups": [
           {
             "group": "はじめに",
-            "pages": ["tools/stormworks/storm-code/index"]
+            "pages": [
+              "tools/stormworks/storm-code/index"
+            ]
+          }
+        ]
+      },
+      {
+        "product": "Stormworks Wiki",
+        "description": "ゲーム本体の仕様リファレンス",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "はじめに",
+            "pages": [
+              "stormworks/index"
+            ]
+          },
+          {
+            "group": "ファイル形式と世界",
+            "pages": []
+          },
+          {
+            "group": "物理と力学",
+            "pages": []
+          },
+          {
+            "group": "動力・電気・流体",
+            "pages": []
+          },
+          {
+            "group": "論理・センサー・マイクロコントローラー",
+            "pages": []
           }
         ]
       }
