@@ -28,7 +28,33 @@
         "groups": [
           {
             "group": "はじめに",
-            "pages": ["tools/stormworks/codec-compiler/index"]
+            "pages": [
+              "tools/stormworks/codec-compiler/index",
+              "tools/stormworks/codec-compiler/quickstart"
+            ]
+          },
+          {
+            "group": "ガイド",
+            "pages": [
+              "tools/stormworks/codec-compiler/guides/fields",
+              "tools/stormworks/codec-compiler/guides/save-management",
+              "tools/stormworks/codec-compiler/guides/import-export",
+              "tools/stormworks/codec-compiler/guides/lua-integration",
+              "tools/stormworks/codec-compiler/guides/ai-export"
+            ]
+          },
+          {
+            "group": "リファレンス",
+            "pages": [
+              "tools/stormworks/codec-compiler/reference/field-settings",
+              "tools/stormworks/codec-compiler/reference/packing-modes",
+              "tools/stormworks/codec-compiler/reference/json-schema",
+              "tools/stormworks/codec-compiler/reference/limits"
+            ]
+          },
+          {
+            "group": "FAQ・トラブルシューティング",
+            "pages": ["tools/stormworks/codec-compiler/faq"]
           }
         ]
       },
