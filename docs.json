@@ -75,7 +75,36 @@
         "groups": [
           {
             "group": "はじめに",
-            "pages": ["tools/stormworks/storm-code/index"]
+            "pages": [
+              "tools/stormworks/storm-code/index",
+              "tools/stormworks/storm-code/getting-started"
+            ]
+          },
+          {
+            "group": "ガイド",
+            "pages": [
+              "tools/stormworks/storm-code/editor",
+              "tools/stormworks/storm-code/runtime",
+              "tools/stormworks/storm-code/require-and-libraries",
+              "tools/stormworks/storm-code/minify",
+              "tools/stormworks/storm-code/project-data",
+              "tools/stormworks/storm-code/collaboration",
+              "tools/stormworks/storm-code/design",
+              "tools/stormworks/storm-code/ai"
+            ]
+          },
+          {
+            "group": "リファレンス",
+            "pages": [
+              "tools/stormworks/storm-code/reference/shortcuts",
+              "tools/stormworks/storm-code/reference/limits"
+            ]
+          },
+          {
+            "group": "FAQ・トラブルシューティング",
+            "pages": [
+              "tools/stormworks/storm-code/faq"
+            ]
           }
         ]
       }

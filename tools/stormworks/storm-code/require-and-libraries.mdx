@@ -1,0 +1,90 @@
+---
+title: "require とライブラリ"
+sidebarTitle: "require とライブラリ"
+description: "複数ファイル構成、sim.* ライブラリ、その他の組み込み API"
+---
+
+Storm Code はブラウザ上で動くため、実機の Lua のような `package.path` を使ったファイルシステム探索はできません。代わりに、プロジェクト内のファイル構成から静的に解決される `require` を提供しています。
+
+## require の使い方
+
+ファイルパスは、拡張子 `.lua` を除いて `/` を `.` に置き換えることでモジュールキーになります。たとえば `lib/util.lua` は `require("lib.util")` で読み込めます。
+
+```lua
+local util = require("lib.util")
+```
+
+対応している構文は、次の 2 つのトップレベル文だけです。
+
+```lua
+local x = require("lib.util")  -- 戻り値を受け取る
+require("lib.util")             -- 副作用のためだけに読み込む
+```
+
+- モジュールは最初に `require` された時点で 1 回だけ実行され、以降は同じ結果がキャッシュから返されます。
+- `return` が無い (または `nil` を返す) モジュールは `true` を返したものとして扱われます。
+- モジュール内の `local` はそのモジュールの外からは見えません。
+
+### 制限事項
+
+lint によって次のパターンはエラーとして検出されます。
+
+| 状況 | エラー |
+|---|---|
+| `require("x").f()` のように式の一部として使う | `require-not-statement` |
+| 関数や `if`/`for`/`while` の中で `require` する | `require-not-top-level` |
+| 変数や文字列連結など、文字列リテラル以外を引数にする | `require-dynamic` |
+| モジュール同士が循環参照している | `require-cycle` |
+| 存在しないモジュールキーを指定する | `module-not-found` |
+
+`require` の対象になるのは `.lua` ファイルだけです。`sim.lua` という名前のファイルは、Sim I/O のラベル継承専用ファイルとして予約されているため `require` の対象から除外されます。
+
+## sim ライブラリ
+
+`sim.*` という名前空間には、性質の異なる 2 種類の機能が同居しています。
+
+### Storm Code ネイティブ機能 (デバッグ実行専用)
+
+シミュレータ上でのデバッグ実行中だけ使える、実機には存在しない機能です。エクスポート (minify) 対象のコードでこれらを参照すると `environment-only-api` エラーになります。
+
+```lua
+sim.setProperty(name, value)          -- プロパティの初期値を設定する
+sim.setNumberInput(channel, value)    -- number 入力チャンネル (1〜32) に値を設定する
+sim.setBoolInput(channel, value)      -- bool 入力チャンネル (1〜32) に値を設定する
+sim.labelNumberInput(channel, label)  -- Sim I/O パネルに表示するラベルを設定する
+sim.labelNumberOutput(channel, label)
+sim.labelBoolInput(channel, label)
+sim.labelBoolOutput(channel, label)
+sim.onTick(callback)                  -- 毎ティック、本来の onTick より前に呼ばれるフックを登録する
+sim.getTouch(monitorId)               -- isTouched, touchX, touchY, width, height を返す (monitorId 省略時は 1)
+sim.getSlider(channel)                -- Sim I/O パネルの number 入力の値を返す
+sim.getIsToggled(channel)             -- Sim I/O パネルの bool トグル状態を返す
+sim.getIsClicked(channel)             -- Sim I/O パネルの bool クリック状態を返す
+```
+
+### 非公式ライブラリ (エクスポート可能)
+
+こちらはコミュニティ拡張ライブラリで、`require` なしでそのまま `sim.*` として使え、minify 時には実際に使ったメンバーだけが静的解析で選ばれて埋め込まれます (tree shaking)。使わなければ 8192 文字の枠を消費しません。
+
+```lua
+sim.clamp(value, lo, hi)                      -- value を [lo, hi] の範囲に収める
+sim.lerp(a, b, t)                             -- a と b を t で線形補間する (t は 0〜1 の外でも外挿される)
+sim.map(value, inMin, inMax, outMin, outMax)  -- value を入力範囲から出力範囲へ写像する
+```
+
+<Warning>
+`sim` は `sim.clamp` のようにメンバーへ直接アクセスする形でのみ使えます。`local s = sim` のように値として代入したり、`sim[key]` のように動的にアクセスしたり、`sim.x = ...` のように代入したりすることはできません (lint エラーになります)。
+</Warning>
+
+## その他の組み込みグローバル
+
+- **`input` / `output` / `property` / `screen`** — 実機のマイクロコントローラー API です。詳細は [Runtime とデバッグ](/tools/stormworks/storm-code/runtime) を参照してください。
+- **`map`** — `map.screenToMap(...)` / `map.mapToScreen(...)` のマップ投影ヘルパーです。
+- **`simulator`** — LifeboatAPI 互換のエイリアステーブルです (`simulator:setScreen`、`simulator:setProperty`、`simulator:setInputNumber` など、コールバック `onLBSimulatorTick(simulator, ticks)` を含みます)。
+- **`onTick()` / `onDraw()`** — Stormworks のコールバック関数です。
+- **`httpReply(port, request_body, response_body)`** / **`async.httpGet(port, request)`** — 実機の HTTP 通信 API です。補完やホバーの対象にはなりますが、Storm Code のシミュレータでは動作しません (実機でのみ機能します)。
+- **`debug.log(message)`** — デバッグログ出力です (実機の `debug` ライブラリとは異なるシミュレータ専用の簡易版です)。
+
+## サンプルプロジェクト
+
+新規ワークスペースには、`require` を使った複数ファイル構成を示すサンプルプロジェクトが自動的に含まれます (`main.lua` が `lib/math3d.lua` や `bench/models.lua` を `require` する 3D 描画のデモです)。実際のファイル構成の参考にしてください。

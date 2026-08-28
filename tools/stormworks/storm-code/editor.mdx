@@ -1,0 +1,71 @@
+---
+title: "Editor"
+sidebarTitle: "Editor"
+description: "シンタックスハイライト、補完、lint の仕組み"
+---
+
+Storm Code のコードエディタは Monaco Editor (VS Code と同じエディタコンポーネント) をベースにしています。
+
+## シンタックスハイライト
+
+ファイルの拡張子に応じて言語モードが自動的に決まります。
+
+| 拡張子 | 言語モード |
+|---|---|
+| `.lua` | Lua |
+| `.md` | Markdown |
+| `.json` | JSON |
+| `.jsonl` / `.txt` | プレーンテキスト |
+
+エディタのカラーテーマは、アプリのライト/ダークモードに追従します (VS Code の Dark+ / Light+ 相当の配色)。
+
+## 補完とホバー
+
+`.lua` ファイルで `.` または `:` を入力すると、組み込み API のメンバー補完が表示されます。対応しているのは次のカテゴリです。
+
+- Stormworks のコールバック (`onTick` / `onDraw` / `httpReply`)
+- `input` / `output` / `property` / `screen` / `map`
+- `sim` (Storm Code ネイティブ機能、および非公式ライブラリ)
+- `simulator` (LifeboatAPI 互換)
+- `require`
+- `async` (`async.httpGet` / `debug.log`)
+- Lua 標準ライブラリのサブセット (`math` / `table` / `string` および基本関数)
+
+補完候補にカーソルを合わせる (ホバーする) と、関数のシグネチャと説明が表示されます。これらの API の詳細は [require とライブラリ](/tools/stormworks/storm-code/require-and-libraries) と [Runtime](/tools/stormworks/storm-code/runtime) を参照してください。
+
+<Note>
+補完はあらかじめ用意された API 一覧から候補を出す仕組みで、プロジェクト内で自分が定義した関数・変数や、`require` したモジュールの中身を補完することはできません。
+</Note>
+
+## Lint (静的解析)
+
+コードの静的解析は、minify 機能と共通のリンカー/アナライザである StormMin (`@stormcat-works/stormmin`) が行います。編集中、変更を検知すると自動的に (デバウンスして) プロジェクト全体を再解析し、結果がエディタ上にマーカーとして表示されます。手動でボタンを押す必要はありません。
+
+検出される問題は次のカテゴリに分かれます。
+
+**プロジェクト構造 (エラー)**
+- モジュールが見つからない、モジュールキーが不正、循環 `require`、構文エラーなど
+
+**`require` の使い方 (エラー)**
+- トップレベル以外での `require`、式の一部としての `require`、動的な引数を渡す `require` は使えません。詳細は [require とライブラリ](/tools/stormworks/storm-code/require-and-libraries) を参照してください。
+
+**`sim` (ambient) の使い方 (エラー)**
+- 未知のメンバーへのアクセス、`sim` 自体を値として扱う、デバッグ専用メンバーのエクスポート時使用など
+
+**一般的な lint (警告)**
+- 未定義のグローバル変数、未使用のローカル変数・引数・ループ変数、変数のシャドーイングなど
+
+**Stormworks 固有のチェック**
+- ゲーム内で使えないグローバルの参照、`onTick` の外での `input`/`output` の呼び出しなど。編集中は警告ですが、minify (エクスポート) 時にはエラーとして扱われます。
+
+この lint はエディタでの表示と minify 時のチェックが常に一致するように設計されています。つまり、エディタ上でエラーが出ていないコードであれば、minify も失敗しません。
+
+## エディタの設定
+
+`File > Settings…` から次の項目を変更できます。
+
+- **Tab Size** — 2 / 4 / 8 から選択 (既定値は 4)
+- **Insert Spaces** — タブの代わりにスペースを挿入するかどうか (既定で有効)
+- **エラーメッセージを日本語化する** — 無効にすると、StormMin が返す元の英語メッセージがそのまま表示されます (既定で有効)
+
+Tab Size と Insert Spaces は、画面下部のステータスバーからも変更できます。
