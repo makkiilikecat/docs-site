@@ -14,8 +14,10 @@
 
 ## 構造
 
-- 各プロダクトのページは `tools/stormworks/<slug>/` 以下に置きます。URL は
-  `https://www.makkii.jp/tools/stormworks/<slug>/` にある実際のアプリと対応させます。
+- 各プロダクトのページは `<slug>/` (リポジトリ直下) に置きます。ドキュメントの URL パスは
+  `/<slug>/...` です。対応する実際のアプリは
+  `https://www.makkii.jp/tools/stormworks/<slug>/` にあります (アプリ側の URL 構造とは異なります)。
+  旧 URL (`/tools/stormworks/<slug>/...`) は `docs.json` の `redirects` で新 URL に転送されます。
 - ナビゲーションは `docs.json` の `navigation.products` で管理します。各プロダクトは
   それぞれ独立した1つのサイトとして扱います (プロダクトスイッチャー)。
   - Storm Editor のみ `tabs` (Storm Studio / Storm Draft) を持ちます。

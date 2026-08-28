@@ -1,0 +1,33 @@
+---
+title: "Physics Frame Codegen"
+sidebarTitle: "概要"
+description: "Physics Sensor の出力を、必要な値だけに絞った Lua コードに変換するブラウザアプリ"
+---
+
+Physics Frame Codegen は、Stormworks の Physics Sensor が計算する任意のオフセット点の物理量を、必要な出力だけに絞った Lua コードに変換するブラウザアプリです。マイクロコントローラーの Lua スクリプトに Physics Sensor の計算結果を組み込みたいビークル開発者向けのツールです。
+
+- 複数の仮想センサー/オフセット設定を管理できる
+- 静的オフセットと動的オフセットを選択できる
+- position、velocity、acceleration などの出力項目を個別に選択できる
+- 設定を localStorage に自動保存し、JSON でインポート/エクスポートできる
+- 生成した Lua コードをダウンロードできる
+- 生成コードのサイズを事前に見積もれる
+
+<Card title="Physics Frame Codegen を開く" icon="arrow-up-right-from-square" href="https://www.makkii.jp/tools/stormworks/physics-codegen/">
+  ブラウザで直接利用できます。
+</Card>
+
+<CardGroup cols={2}>
+  <Card title="使い始め方" icon="rocket" href="/physics-codegen/quickstart">
+    最初の Lua コードを生成するまでの手順
+  </Card>
+  <Card title="仮想オフセットを設定する" icon="crosshairs" href="/physics-codegen/guides/frames">
+    静的/動的オフセットの設定方法
+  </Card>
+  <Card title="出力リファレンス" icon="table" href="/physics-codegen/reference/outputs">
+    出力項目と生成される変数の一覧
+  </Card>
+  <Card title="セーブ管理・入出力" icon="folder-tree" href="/physics-codegen/reference/data">
+    Vehicle/MC/Lua のセーブツリーと JSON 入出力
+  </Card>
+</CardGroup>

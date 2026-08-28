@@ -1,0 +1,103 @@
+---
+title: "CLI の使い方"
+sidebarTitle: "CLI"
+description: "stormmin コマンドで単一ファイル/複数モジュールの Lua を minify する手順"
+---
+
+`stormmin` は `compile`（既定）と `lint` の 2 つのサブコマンドを持ちます。サブコマンドを省略すると `compile` として扱われるため、`stormmin input.lua` と `stormmin compile input.lua` は同じ意味です。
+
+<Note>
+  npm パッケージの CLI は、実行環境に対応する native バイナリ（`linux-x64` / `win32-x64` / `darwin-arm64` / `darwin-x64`）が同梱されていればそれを呼び出し、無ければ Node 向け WASM 実装にフォールバックします。GitHub Release から取得した native バイナリ単体を直接実行することもできます。
+</Note>
+
+<Warning>
+  WASM フォールバック側の CLI が受け付けるのは単一ファイルの minify のみです（`FILE` / `-o` / `--options` / `--options-file` / `--json` / `-h` / `-V`）。`compile`/`lint` のサブコマンドやプロジェクトモードのフラグ（`--entry` / `--modules-dir` / `--project` / `--no-minify` / `--map` / `--format`）は native バイナリでのみ利用できます。フォールバック時にこれらを渡すと `unknown option` エラー（終了コード 2）になります。
+</Warning>
+
+## 単一ファイルの minify
+
+`compile` の既定の動作（プロジェクトモード関連フラグを指定しない場合）は、単一ファイルの minify です。
+
+```sh
+stormmin input.lua -o output.lua
+```
+
+- 入力は positional 引数のファイルパス、または `-`/省略時は標準入力から読み込みます。
+- 出力は `-o`/`--output` を指定するとファイルへ、指定しなければ標準出力へ書き込まれます。
+- `--json` を付けると、圧縮後コードの文字列ではなく、サイズ・削減量・pass 実行結果・診断情報などを含む結果オブジェクト全体を JSON で出力します（フィールドの詳細は [ライブラリ API リファレンス](/stormmin/reference/api) の `CompileResult` を参照）。
+
+## オプションの指定
+
+コンパイルオプションは JSON で渡します。インライン指定とファイル指定のどちらか一方だけを使えます。
+
+<CodeGroup>
+```sh インライン指定
+stormmin input.lua --options '{"mode":"safe","targetSize":8192}'
+```
+
+```sh ファイル指定
+stormmin input.lua --options-file options.json
+```
+</CodeGroup>
+
+オプションの JSON が壊れている場合はエラーになりますが、JSON として妥当でも `stormmin` が認識しないキー（存在しないオプション名や不明な pass ID）は、無視されるだけでエラーにはなりません。オプションが実際に適用されたかどうかは `--json` の出力で確認してください。指定できるオプションの一覧は [ライブラリ API リファレンス](/stormmin/reference/api) を参照してください。
+
+## 複数モジュールのプロジェクトを minify する
+
+`require` で分割した複数ファイルをリンクして 1 つの Lua にまとめるには、次のいずれかでプロジェクトモードを有効にします。単一ファイル入力（positional 引数）とは同時に指定できません。
+
+<CodeGroup>
+```sh --entry / --modules-dir
+stormmin compile --entry main --modules-dir src/ -o out.lua
+```
+
+```sh --project
+stormmin compile --project project.json -o out.lua
+```
+</CodeGroup>
+
+- `--modules-dir` はディレクトリを再帰的に走査し、`*.lua` ファイルを集めます。`--entry` と併用が必須です。
+- `--project` は `LuaProject` 形式の JSON ファイル（`entry` / `modules` / 任意の `ambient`）を直接読み込みます。`--entry`/`--modules-dir` とは同時に指定できません。
+- モジュール分割の詳しいルールと制約は [require によるモジュール分割](/stormmin/guides/modules) を参照してください。
+
+プロジェクトモードでは、リンクのみ行い minify をスキップして Source Map v3 を出力することもできます。
+
+```sh
+stormmin compile --entry main --modules-dir src/ --no-minify --map out.lua.map
+```
+
+`--map` は `--no-minify` と併用する場合のみ指定できます。
+
+## lint（解析のみ）
+
+`lint` サブコマンドは minify を行わず、静的解析だけを実行します。プロジェクトモードが必須で、単一ファイルの `lint` はサポートされていません。
+
+```sh
+stormmin lint --entry main --modules-dir src/ --format json
+```
+
+- `--format` は `text`（既定）または `json` を指定できます。それ以外の値を渡すとエラーになります。
+- `--json` フラグは `lint` では無視されます。JSON 出力が欲しい場合は `--format json` を使ってください。
+- `lint` の解析オプションは `disabledRules`（抑制する診断コードの配列）のみです。`severity: error` の診断は `disabledRules` では抑制できません。
+
+## serve（デモ UI をローカル配信）
+
+`serve` は npm パッケージの `stormmin` コマンド専用のサブコマンドで、パッケージに同梱された Web 版と同じ UI をローカルで静的配信します。native バイナリ単体にはこのサブコマンドはありません。
+
+```sh
+stormmin serve --port 8787
+```
+
+- ポートの既定値は `8787` です。`--port`/`-p` で指定するか、環境変数 `PORT` で変えられます（`--port` が優先）。
+- 待ち受けホストの既定値は `127.0.0.1` で、環境変数 `HOST` で変えられます。
+- 起動すると `StormMin Web: http://<host>:<port>` を表示し、そのまま常駐します。
+
+## 終了コード
+
+| コード | 意味 |
+| --- | --- |
+| `0` | 成功（`--help`/`--version` の表示を含む） |
+| `1` | compile/lint は実行できたが、結果が失敗（`ok: false` や error 診断あり） |
+| `2` | 引数解析エラーやファイル I/O エラーなど、コマンド自体が実行できなかった場合 |
+
+`stormmin -V`/`--version` は `stormmin <バージョン>` の形式でバージョン文字列を出力します。
