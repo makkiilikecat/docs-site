@@ -85,7 +85,32 @@
         "groups": [
           {
             "group": "はじめに",
-            "pages": ["tools/stormworks/stormmin/index"]
+            "pages": [
+              "tools/stormworks/stormmin/index",
+              "tools/stormworks/stormmin/getting-started"
+            ]
+          },
+          {
+            "group": "ガイド",
+            "pages": [
+              "tools/stormworks/stormmin/guides/cli-usage",
+              "tools/stormworks/stormmin/guides/library-usage",
+              "tools/stormworks/stormmin/guides/modules",
+              "tools/stormworks/stormmin/guides/target-size"
+            ]
+          },
+          {
+            "group": "リファレンス",
+            "pages": [
+              "tools/stormworks/stormmin/reference/cli",
+              "tools/stormworks/stormmin/reference/api",
+              "tools/stormworks/stormmin/reference/lua-support",
+              "tools/stormworks/stormmin/reference/diagnostics"
+            ]
+          },
+          {
+            "group": "FAQ・トラブルシューティング",
+            "pages": ["tools/stormworks/stormmin/faq"]
           }
         ]
       },

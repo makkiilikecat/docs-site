@@ -6,6 +6,10 @@ description: "Stormworks ビークル Lua 向けの全体最適化 Lua コンパ
 
 StormMin は、Stormworks のビークル Lua が持つ 8192 文字制限にコードを収めるための、全体最適化 Lua コンパイラ (minifier) です。Web 版、CLI、Node/ブラウザ向けライブラリ (npm `@stormcat-works/stormmin`) として利用でき、大規模な Lua スクリプトを書くビークル開発者向けのツールです。
 
+<Warning>
+  StormMin は Web 版・CLI・ライブラリのすべてが β 版 (バージョン 1.0 未満) です。出力コードにコンパイラ起因のバグが含まれる可能性があるため、minify 後のコードは必ずゲーム内で動作確認してください。
+</Warning>
+
 - Web 版での minify
 - CLI/ネイティブバイナリでの minify
 - Node/ブラウザ向けライブラリとしての組み込み

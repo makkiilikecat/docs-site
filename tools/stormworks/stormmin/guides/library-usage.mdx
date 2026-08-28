@@ -1,0 +1,71 @@
+---
+title: "ライブラリの使い方"
+sidebarTitle: "ライブラリ"
+description: "Node.js/ブラウザ向けライブラリ @stormcat-works/stormmin の組み込み方"
+---
+
+`@stormcat-works/stormmin` は Node.js とブラウザの両方から `import` できる ESM 専用パッケージです。公開しているのは粗粒度の `compile` 系関数のみで、pass ごとの個別 API は提供していません。
+
+```js
+import { compile } from '@stormcat-works/stormmin';
+
+const result = await compile(source, { mode: 'smallest' });
+if (!result.ok) throw new Error(result.error);
+console.log(result.code, result.size);
+```
+
+## Node.js とブラウザの違い
+
+パッケージの実体はどちらも同じ WASM ビルドで、出力は byte 単位で同一です。実行方式だけが異なります。
+
+- **ブラウザ**: `compile()` はメインスレッドをブロックしません。内部の coordinator が Web Worker 上に WASM を lazy-load し、候補の評価を coordinator 自身 + 複数の candidate Worker に分散します。`SharedArrayBuffer` やクロスオリジン分離は不要です。
+- **Node.js**: 同じ WASM を呼び出し元のプロセス内で同期的にロードし、候補の評価は Worker を使わず逐次実行します。
+
+<Warning>
+  Node.js 向けのエントリーポイントは `scanProperties()` と `passMetadata()` を実装していません。これらの関数はブラウザ環境からのみ利用できます。Node.js から呼び出すと未定義になります。`compile`/`compileProject`/`analyze`/`terminate` は両方の環境で利用できます。
+</Warning>
+
+<Note>
+  ブラウザ環境では `Worker` コンストラクタが必須です。`Worker` を提供しない実行コンテキストで呼び出すと、`compile()` などのすべての呼び出しが Promise の reject で失敗します。
+</Note>
+
+## 公開関数
+
+| 関数 | 対応環境 | 概要 |
+| --- | --- | --- |
+| `compile(source, options?)` | Node/ブラウザ | 単一ファイルの Lua を minify する |
+| `compileProject(project, options?)` | Node/ブラウザ | `require` で分割した複数モジュールをリンクし、必要なら minify する |
+| `analyze(project, options?)` | Node/ブラウザ | リンクと lint 相当の静的解析だけを行う（構文エラーでも `ok: true` のまま `diagnostics` で報告） |
+| `scanProperties(source)` | ブラウザのみ | ソース中の `property.get*` 呼び出しを検出する |
+| `passMetadata()` | ブラウザのみ | 全最適化 pass の ID と表示名の一覧を返す |
+| `terminate()` | Node/ブラウザ | 内部の Worker を終了し、保留中の呼び出しを reject する（Node では no-op） |
+
+各関数のシグネチャとオプション/戻り値の型は [ライブラリ API リファレンス](/tools/stormworks/stormmin/reference/api) を参照してください。
+
+## エラーの扱い
+
+ライブラリは専用のエラークラスを公開していません。失敗は次のいずれかの形で表れます。
+
+- `compile()`/`compileProject()` が `{ ok: false, error, diagnostics }` を返す（構文エラーや Stormworks 非対応 API の使用など）。
+- Worker のクラッシュや未対応環境など、呼び出し自体が失敗した場合は Promise が reject される。
+
+`analyze()` は構文エラーがあっても `ok: true` のまま `diagnostics` に `syntax-error` として報告します。編集中のエディタでリアルタイムに lint 結果を表示する用途を想定した挙動です。`ok: false` になるのは呼び出し自体の内部エラーのときだけです。
+
+## require を使った複数モジュールのリンク
+
+```js
+import { compileProject, analyze } from '@stormcat-works/stormmin';
+
+const project = {
+  entry: 'main',
+  modules: {
+    main: 'local util = require("lib.util")\nreturn util.f()\n',
+    'lib.util': 'local M = {}\nfunction M.f() return 1 end\nreturn M\n',
+  },
+};
+
+const linted = await analyze(project);
+const result = await compileProject(project, { minify: true });
+```
+
+`modules` はモジュールキー（`.` 区切りの Lua 識別子、例: `lib.util`）からソース文字列へのフラットな map です。詳しいルールと制約は [require によるモジュール分割](/tools/stormworks/stormmin/guides/modules) を参照してください。

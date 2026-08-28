@@ -1,0 +1,200 @@
+---
+title: "ライブラリ API リファレンス"
+sidebarTitle: "ライブラリ API"
+description: "@stormcat-works/stormmin が公開する関数・オプション・戻り値の型"
+---
+
+`@stormcat-works/stormmin` が公開する関数は次の 6 つです。
+
+```ts
+compile(source: string, options?: CompileOptions): Promise<CompileResult>
+compileProject(project: LuaProject, options?: ProjectCompileOptions): Promise<ProjectCompileResult>
+analyze(project: LuaProject, options?: AnalyzeOptions): Promise<AnalyzeResult>
+scanProperties(source: string): Promise<PropertyScanResult>
+passMetadata(): Promise<PassMetadataEntry[]>
+terminate(): void
+```
+
+<Warning>
+  `scanProperties` と `passMetadata` は Node.js のエントリーポイントには実装されておらず、ブラウザ環境からのみ利用できます。
+</Warning>
+
+## CompileOptions
+
+`compile()`/`compileProject()` に渡すオプションです。すべて省略可能です。
+
+| フィールド | 型 | 既定値 | 説明 |
+| --- | --- | --- | --- |
+| `mode` | `"smallest" \| "safe"` | `"smallest"` | `smallest` は aggressive なサイズ最小化。`safe` は host math の差などに対して保守的な変換だけを使用します。 |
+| `property` | `PropertyConfig` | `{ mode: "runtime" }` | `property.get*` の扱い。下記参照。 |
+| `zeroCostNewlines` | `boolean` | `true` | 文字数コストがゼロの位置に改行を入れるかどうか。 |
+| `passToggles` | `Record<string, boolean>` | `{}` | 個別 pass の有効/無効。認識しない pass ID は無視されます。 |
+| `numericMode` | `"tolerant" \| "exact"` | `"tolerant"` | `tolerant` は `numericTolerance` の範囲内での近似を許可。`exact` は近似やユニット再スケーリングなど exact semantics を保証できない pass を無効化します。 |
+| `numericTolerance` | `{ abs: number, rel: number }` | `{ abs: 0.000001, rel: 0.000001 }`（tolerant時） | 数値近似を許容する絶対誤差・相対誤差。 |
+| `searchMode` | `"exhaustive" \| "fast"` | `"exhaustive"` | `fast` は簡易なサイズ見積りを使う bounded beam 探索。 |
+| `searchBeamWidth` | `number` | `4` | `fast` 探索時の beam 幅。1〜16 にクランプされます（小数は切り捨て後クランプ）。 |
+| `targetSize` | `number` | 未指定 | 指定すると OBJ-2 satisfaction-style search が有効になります。詳細は [目標サイズ探索](/tools/stormworks/stormmin/guides/target-size) を参照してください。 |
+
+`PropertyConfig`:
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `mode` | `"runtime" \| "hardcode"` | `runtime`（既定）は `property.getNumber()`/`property.getBool()` の呼び出しをそのまま維持します。`hardcode` は指定した builtin property read だけを literal 化します。シャドウされたローカル `property` は対象外です。 |
+| `numbers` | `Record<string, number>` | `hardcode` 時に使う数値プロパティの値。 |
+| `bools` | `Record<string, boolean>` | `hardcode` 時に使う真偽値プロパティの値。 |
+| `texts` | `Record<string, string>` | `hardcode` 時に使う文字列プロパティの値。 |
+
+<Note>
+  `numericMode` を省略し、かつ `numericTolerance` を `{ abs: 0, rel: 0 }` と明示した場合は `exact` モードとして扱われます。
+</Note>
+
+pack/unpack、bit 演算、index、numeric-for の境界など exact route に到達する binding は、`tolerant` モードでも近似の対象になりません。
+
+`passToggles` に指定できる pass ID の一覧は `passMetadata()` で取得できます。既定で無効な pass は `general-expression-factoring` / `repeated-expression-factoring` / `scalar-vector-loop-synthesis` / `redundant-nil-fallback-elimination` の 4 つです。加えて `numericMode: "exact"` の場合は、次の 12 pass が強制的に無効化されます（無効化された pass は結果の `disabledPasses` で確認できます）。
+
+```text
+constant-folding, numeric-literal-approximation,
+binding-unit-rescaling, interval-origin-shifting,
+literal-call-folding, split-sign-recomposition-elimination,
+multiplicative-carrier-reassociation, coefficient-carrier-synthesis,
+scalar-vector-loop-synthesis, common-offset-absorption,
+constant-wrapper-merging, affine-wrapper-merging
+```
+
+## CompileResult
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `ok` | `boolean` | 成功したかどうか。 |
+| `error` | `string`（非推奨） | 失敗時のエラーメッセージ。 |
+| `code` | `string` | minify 後の Lua コード（成功時）。 |
+| `original` | `number` | 元のコードの長さ（UTF-16 コード単位）。 |
+| `size` | `number` | 出力コードの長さ（UTF-16 コード単位）。 |
+| `saved` | `number` | `original - size`。 |
+| `baseline` | `number` | 入力をトークン単位で素朴に minify したときの長さ。削減効果の比較基準です。 |
+| `elapsedMs` | `number` | 実行時間（ミリ秒）。 |
+| `passes` | `PassRecord[]` | 実行された各 pass の記録。 |
+| `diagnostics` | `Diagnostic[]` | 診断（警告・エラー）の一覧。 |
+| `search` | `SearchStats` | 探索の統計情報。下記参照。 |
+| `apiAliases` | `string[]` | 適用された API エイリアス化の一覧。 |
+| `disabledPasses` | `string[]` | 実際に無効化された pass の一覧（既定無効・`exact` モード起因を含む）。 |
+| `assumptions` | `Assumptions` | この結果が前提とした数値意味論。下記参照。 |
+| `propertyMode` | `"runtime" \| "hardcode"` | 適用された property モード。 |
+| `propertyReadsHardcoded` | `number` | hardcode 化された property read の件数。 |
+| `zeroCostNewlines` | `number` | ゼロコスト位置として改行に変換された箇所の数。 |
+
+`PassRecord`:
+
+```ts
+{ name: string; saved?: number; detail?: string; elapsedMs?: number }
+```
+
+`Assumptions`:
+
+```ts
+{
+  finiteNumbers: boolean;
+  integerFloatSubtypeMayChange: boolean;
+  numericMode: "exact" | "tolerant";
+  numericTolerance: { abs: number; rel: number };
+}
+```
+
+`SearchStats`:
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `mode` | `"exhaustive" \| "fast" \| "satisficing"` | 実際に使われた探索モード。`targetSize` 指定時は `satisficing`。 |
+| `beamWidth` | `number \| null` | `fast` 探索時（satisficing でない場合）の beam 幅。 |
+| `candidates` / `attempted` | `number` | 候補数・試行数。 |
+| `parseRejected` / `semanticRejected` | `number` | パース/意味検証で棄却された候補数。 |
+| `coreVariants` / `structuralVariants` / `structuralExplored` | `number` | 探索段階ごとの候補数。 |
+| `structural` / `layout` | `string` | 採用された候補の structural/layout バリアント名。 |
+| `candidateSizes` | `{ structural: string, layout: string, size: number }[]` | 各候補のバリアント名とサイズ。 |
+| `targetSize` (`number`) / `targetMet` (`boolean`) / `stoppedEarly` (`boolean`) / `checkpoints` (`number`) / `stage` (`string`) | — | `targetSize` 指定時（satisficing）のみ含まれるフィールド。[目標サイズ探索](/tools/stormworks/stormmin/guides/target-size) を参照してください。 |
+
+## ProjectCompileOptions / ProjectCompileResult
+
+`ProjectCompileOptions` は `CompileOptions` に `minify?: boolean`（既定 `true`）を加えたものです。
+
+`ProjectCompileResult` は `CompileResult` の統計フィールドに加えて、次を含みます。
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `map` | `string` | Source Map v3 の JSON 文字列。`minify: false` のときのみ含まれます。 |
+| `usedModules` | `string[]` | 実際にリンクに使われたモジュールキーの一覧。 |
+| `injectedAmbient` | `Record<string, string[]>` | 注入された ambient 名前空間のメンバー一覧。 |
+
+失敗時（`ok: false`）は `diagnostics` のみが返され、`code`/`map` は含まれません。
+
+## analyze / AnalyzeResult
+
+```ts
+analyze(project: LuaProject, options?: AnalyzeOptions): Promise<AnalyzeResult>
+```
+
+`AnalyzeOptions`: `{ disabledRules?: string[] }`
+
+`AnalyzeResult`: `{ ok: boolean; diagnostics: Diagnostic[] }`
+
+`ok` は内部エラーの場合にのみ `false` になります。Lua の構文エラーは `ok: true` のまま `diagnostics` に `syntax-error` として報告されます。
+
+## Diagnostic
+
+`compile()`/`compileProject()`/`analyze()` すべてで共通のスキーマです。
+
+```ts
+{
+  code: string;
+  severity: "error" | "warning" | "info";
+  message: string;
+  module?: string;
+  range?: { line: number; col: number; endLine?: number; endCol?: number };
+}
+```
+
+`code` は安定な kebab-case 識別子で、廃止されることはあっても意味の変更・再利用はされません。`message` は常に英語固定で、ローカライズが必要な場合は `code` をキーにします。診断コードの一覧は [診断コードリファレンス](/tools/stormworks/stormmin/reference/diagnostics) を参照してください。
+
+## LuaProject
+
+```ts
+interface LuaProject {
+  entry: string;
+  modules: Record<string, string>;
+  ambient?: Record<string, AmbientNamespace>;
+}
+
+interface AmbientNamespace {
+  members: Record<string, AmbientMember>;
+}
+
+type AmbientMember =
+  | { kind: "module"; source: string }
+  | { kind: "environmentOnly" };
+```
+
+モジュールキーの命名規則は [require によるモジュール分割](/tools/stormworks/stormmin/guides/modules) を参照してください。
+
+## scanProperties / passMetadata
+
+```ts
+scanProperties(source: string): Promise<{
+  ok: boolean;
+  numbers: string[];
+  bools: string[];
+  texts: string[];
+  dynamicCount: number;
+}>
+
+passMetadata(): Promise<{ id: string; recordName: string }[]>
+```
+
+`scanProperties` はソース中の `property.get*` 呼び出しを検出し、種類ごとのキー一覧と、動的（キーが定数でない）呼び出しの件数を返します。`passMetadata` は全 pass の ID と表示名のペアを返します（同じ pass ID が複数の表示名で登場することがあります）。どちらもブラウザ環境専用です。
+
+## terminate
+
+```ts
+terminate(): void
+```
+
+ブラウザでは内部の Worker を終了し、保留中の呼び出しをすべて reject します。Node.js では no-op です。

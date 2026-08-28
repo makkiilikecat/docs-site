@@ -1,0 +1,57 @@
+---
+title: "目標サイズ探索 (OBJ-2)"
+sidebarTitle: "目標サイズ探索"
+description: "targetSize を指定して、目標文字数に到達した時点で探索を打ち切る"
+---
+
+StormMin の既定の探索目的（OBJ-1）は「できるだけ小さいコードを出す」ことです。`targetSize` オプションを指定すると、目的が「指定サイズ以下の、意味を保存した候補が得られた時点でできるだけ早く止まる」（OBJ-2、satisfaction-style search）に切り替わります。
+
+## いつ使うか
+
+Stormworks のビークル Lua には 8192 文字制限があります。制限にちょうど収まればよく、それ以上小さくする必要がない場合は、`targetSize` を指定することで探索時間を大きく削減できます。`targetSize` を指定しない場合、探索順・出力は従来の OBJ-1 のまま変わりません。
+
+## 使い方
+
+<CodeGroup>
+```js ライブラリ
+const result = await compile(source, { targetSize: 8192 });
+console.log(result.size, result.search.targetMet, result.search.stage);
+```
+
+```sh CLI
+stormmin input.lua --options '{"targetSize":8192}'
+```
+</CodeGroup>
+
+Web 版では、左パネルの「目標文字数 (targetSize)」欄に数値を入力します。空欄の場合は従来どおり最小化（OBJ-1）が実行されます。
+
+## 探索の進み方
+
+探索は次の決定的なチェックポイント列で進みます。
+
+```text
+source → base → cheap-core → balanced-core → structural → candidate → full-search
+```
+
+`search.stage` にはこのいずれかの名前が入ります（`full-search` は早期終了できず OBJ-1 の全探索へフォールバックしたことを表します）。
+
+目標を満たす候補が見つかった時点で早期終了します。候補の順位付けに wall-clock 時間は使わず、入力ごとの短縮量と固定の cost weight だけで判断するため、実行環境による結果のばらつきは生まれません。
+
+## 結果の読み方
+
+`compile()`/`compileProject()` の戻り値の `search` フィールドに、探索の状態が含まれます。
+
+| フィールド | 意味 |
+| --- | --- |
+| `search.mode` | `"satisficing"`（`targetSize` 指定時） |
+| `search.targetSize` | 指定した目標サイズ |
+| `search.targetMet` | 目標サイズ以下の候補が得られたかどうか |
+| `search.stoppedEarly` | 目標達成により探索を早期終了したかどうか |
+| `search.stage` | 探索が停止したチェックポイント名 |
+| `search.checkpoints` | 完了したチェックポイントの数 |
+
+目標未達の場合でも、その時点で得られた最良の結果が `code` として返されます。`search.targetMet` が `false` であれば、出力コードが目標サイズを超えていることを意味します。
+
+<Note>
+  目標サイズ探索は最小化の品質を評価するものではありません。「制限を満たすコードをできるだけ早く得る」ための機能であり、同じ入力を OBJ-1（`targetSize` 未指定）で minify した場合よりコードサイズが大きくなることがあります。
+</Note>
