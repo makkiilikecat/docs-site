@@ -1,37 +1,85 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "makkii.jp Docs",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "pages": [
+    "products": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "product": "Physics Frame Codegen",
+        "description": "Physics Sensor の出力を Lua コードに変換するツール",
+        "icon": "wave-square",
+        "groups": [
+          {
+            "group": "はじめに",
+            "pages": ["tools/stormworks/physics-codegen/index"]
+          }
+        ]
+      },
+      {
+        "product": "Number Codec Compiler",
+        "description": "数値のエンコード/デコード Lua コードを生成するツール",
+        "icon": "binary",
+        "groups": [
+          {
+            "group": "はじめに",
+            "pages": ["tools/stormworks/codec-compiler/index"]
+          }
+        ]
+      },
+      {
+        "product": "StormMin",
+        "description": "ビークル Lua 向けの minifier",
+        "icon": "minimize",
+        "groups": [
+          {
+            "group": "はじめに",
+            "pages": ["tools/stormworks/stormmin/index"]
+          }
+        ]
+      },
+      {
+        "product": "Storm Editor",
+        "description": "非公式ビークルエディター",
+        "icon": "pen-ruler",
+        "tabs": [
+          {
+            "tab": "Storm Studio",
+            "groups": [
+              {
+                "group": "はじめに",
+                "pages": ["tools/stormworks/storm-editor/studio/index"]
+              }
+            ]
+          },
+          {
+            "tab": "Storm Draft",
+            "groups": [
+              {
+                "group": "はじめに",
+                "pages": ["tools/stormworks/storm-editor/draft/index"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "product": "Storm Code",
+        "description": "ブラウザ完結の Lua 開発環境",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "はじめに",
+            "pages": ["tools/stormworks/storm-code/index"]
+          }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -40,14 +88,14 @@
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "makkii.jp",
+        "href": "https://www.makkii.jp/"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "label": "GitHub",
+      "href": "https://github.com/Stormcat-Works"
     }
   },
   "contextual": {
@@ -64,9 +112,7 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/Stormcat-Works"
     }
   }
 }
