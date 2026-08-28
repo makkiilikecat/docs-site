@@ -1,0 +1,103 @@
+---
+title: "対応 Lua 構文と意味保存モデル"
+sidebarTitle: "Lua 構文と意味保存"
+description: "パーサが受理する構文の範囲、Stormworks 固有の制限、最適化の前提"
+---
+
+StormMin のパーサは、Lua の構文として受理できるかどうかと、その参照先が Stormworks のサンドボックスで実際に使えるかどうかを別々に判定します。この 2 つは診断としても別のレイヤーで扱われます。
+
+## 対応する構文
+
+パーサは次を含む Lua 構文を受理します。
+
+- `goto` / `::label::`
+- ビット演算子（`&amp;` `|` `~` `&lt;&lt;` `&gt;&gt;`）
+- 整数除算 `//`
+- ロングブラケット文字列・コメント（`[[ ]]`、`[=[ ]=]`）
+- 可変長引数 `...`
+- 複数戻り値・複数代入
+- ステップ付き数値 for、汎用 for（`ipairs`/`pairs` などとの組み合わせ）
+- クロージャ・アップバリュー
+- 16 進数値・浮動小数点数・指数表記（16 進浮動小数点を含む）
+
+`setmetatable`/`getmetatable`/`coroutine.*` のような呼び出しは、Lua の構文としては通常の関数呼び出しなので構文的には受理されます。ただし、これらの名前自体が Stormworks サンドボックスで利用できないため、意味検証の段階で警告またはエラーになります（後述）。
+
+<Warning>
+  引数リストが可変長引数のみ（`(...)`）の関数は、名前付き・無名を問わず現在のパーサではパースエラーになります。`function f(...) end` / `local function f(...) end` / `local g = function(...) end` は `expected expression at <行>:<列>, got )`、文としての `function(...) end` は `expected (, got ... at <行>:<列>` になります。回避するには `function f(a, ...) end` のように名前付き引数を 1 つ以上前置してください。
+</Warning>
+
+## 構文エラーと Stormworks 非対応 API の違い
+
+- **構文エラー**（`syntax-error`）: パーサ/レキサーの段階で検出される、Lua として不正な入力です。常に `severity: error` で、これがあるとコンパイルできません。
+- **Stormworks で利用できないグローバル**（`sw-unavailable-global`）: 構文的には正しい Lua ですが、参照しているグローバル（標準 Lua のビルトインとして知られているが Stormworks には存在しない名前）が実行時に存在しないケースです。検出対象の名前は次の 20 個です。
+
+```text
+print, pcall, xpcall, setmetatable, getmetatable,
+rawget, rawset, rawequal, rawlen,
+load, loadstring, loadfile, dofile, unpack,
+os, io, coroutine, collectgarbage, debug, package
+```
+
+  `require` はコンパイル時に静的展開されるため、このリストには含まれません。`analyze()` では警告、`compileProject()`（minify 実行）ではエラーとして扱われます。自前で同名のグローバルを定義していれば対象外です。
+
+<Note>
+  `error`/`assert` は Stormworks 実機での可否が未確認のため、既知の非搭載ビルトインリストには含まれていません（検出対象外）。
+</Note>
+
+## Stormworks で利用できるグローバルルート
+
+resolver が標準で認識するグローバルルートは次の 16 個です。
+
+```text
+math, input, output, property, screen, string, table,
+type, ipairs, pairs, next, select, tonumber, tostring,
+map, self
+```
+
+`input.*`/`output.*` は `onTick` コールバック（`function onTick() ... end` または `onTick = function() ... end` の本体、ネストした内側関数を含む）の中でのみ参照できます。それ以外の場所での参照は `input-outside-ontick`/`output-outside-ontick` として検出されます。関数呼び出しを経由した間接的な参照は現時点では検出されません。
+
+## 意味保存モデル
+
+StormMin はパース後に lexical binding を解決し、最適化の同値性判定には文字列名ではなく解決済みの binding identity を使います。そのため `math`、`screen`、`input`、`output`、`property` などと同名のローカル変数や引数は、それらをシャドウしている限り builtin として扱われません。
+
+主に次を解析した上で最適化を行います。
+
+- binding の read/write
+- ユーザー定義関数呼び出し/builtin 呼び出しの区別
+- 順序付きの screen 副作用
+- 例外が発生しうるかどうか
+- コールバック内での安定性
+
+`screen.setColor`/`screen.draw*` は順序付き副作用として扱われます。評価回数・評価順・例外発生位置を変える最適化は、必要な証明条件を満たさない限り採用されません。
+
+<Note>
+  pass ごとの ON/OFF（`passToggles`）は通常のチューニングつまみではなく、問題が見つかった場合の一時的な回避手段として提供されています。
+</Note>
+
+## 壊れ得るコードのパターン
+
+次のパターンを使うコードは、コンパイル結果に警告診断が付きます。これらは最適化の前提（クローズドワールドな静的解析）を崩す可能性があるためです。
+
+| パターン | 診断コード | メッセージ |
+| --- | --- | --- |
+| `_ENV` への参照 | `env-access` | `_ENV access disables closed-world global assumptions.` |
+| `rawget`/`rawset` の呼び出し | `dynamic-table-key` | `{name} uses a dynamic key; affected tables are excluded from field transformations.` |
+| `load`/`loadstring`/`setmetatable`/`getmetatable`/`pcall`/`xpcall`/`print` の呼び出し | `unsupported-api-call` | `{name} is unavailable or unsupported in Stormworks.` |
+
+`_ENV` を介した動的なグローバルアクセスを行うコードは、StormMin がバインディングを静的に解決できないため、最適化の対象から除外されるか、意図しない結果になる可能性があります。`rawget`/`rawset` を使うテーブルはフィールド変換（キーの短縮など）の対象から除外されます。
+
+## 数値モード
+
+- `tolerant`（既定）: `numericTolerance.abs`/`.rel` の範囲内の近似を許可します。
+- `exact`: 近似やユニット再スケーリングなど、exact semantics を保証できない次の 12 pass を強制的に無効化します。
+
+```text
+constant-folding, numeric-literal-approximation,
+binding-unit-rescaling, interval-origin-shifting,
+literal-call-folding, split-sign-recomposition-elimination,
+multiplicative-carrier-reassociation, coefficient-carrier-synthesis,
+scalar-vector-loop-synthesis, common-offset-absorption,
+constant-wrapper-merging, affine-wrapper-merging
+```
+
+pack/unpack、ビット演算、インデックス、numeric-for の境界値など、exact route に到達する binding は `tolerant` モードでも近似の対象になりません。

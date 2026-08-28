@@ -1,0 +1,120 @@
+---
+title: "使い始め方"
+sidebarTitle: "使い始め方"
+description: "Web 版、CLI、ライブラリのそれぞれで StormMin を最初に使う手順"
+---
+
+StormMin は 3 つの形態で利用できます。ビークルに貼る Lua を手元で minify するだけなら Web 版、ビルドスクリプトに組み込むなら CLI、Node/ブラウザアプリに minify 機能を組み込むならライブラリを選んでください。
+
+<Tabs>
+  <Tab title="Web 版">
+    インストールは不要です。
+
+    <Steps>
+      <Step title="Web 版を開く">
+        [https://www.makkii.jp/tools/stormworks/stormmin/](https://www.makkii.jp/tools/stormworks/stormmin/) にアクセスします。
+      </Step>
+      <Step title="Lua コードを貼り付ける">
+        左側の "Original Lua" エディタに、ビークル/マイクロコントローラーの Lua コードを貼り付けます。
+      </Step>
+      <Step title="最短化実行を押す">
+        "最短化実行 (Optimize)" ボタンを押すと、WASM 上のコンパイラがブラウザの Worker 内で minify を実行します。
+      </Step>
+      <Step title="出力を取得する">
+        右側の "Optimized Output" に結果が表示されます。"Copy" でクリップボードにコピー、".lua" でファイルとしてダウンロードできます。
+      </Step>
+    </Steps>
+
+    {/* TODO screenshot: Web 版のメイン画面（左に入力、右に出力、上部に容量バナー） */}
+
+    <Warning>
+      Web 版は現時点で β 版です。出力コードには "⚠️ β版につき、出力コードにコンパイラ起因のバグが含まれる可能性があります。ゲーム内で必ず動作確認してください。" という警告が常に表示されます。ゲーム内での動作確認を必ず行ってください。
+    </Warning>
+
+    <Note>
+      Web 版は単一ファイルの Lua コードのみに対応しています。`require` を使った複数モジュール構成を minify するには CLI かライブラリを使ってください。詳細は [require によるモジュール分割](/tools/stormworks/stormmin/guides/modules) を参照してください。
+    </Note>
+  </Tab>
+  <Tab title="CLI">
+    <Steps>
+      <Step title="インストールする">
+        npm から CLI をグローバルインストールします。
+
+        ```sh
+        npm i -g @stormcat-works/stormmin
+        ```
+
+        インストールせずに使う場合は `npx` でも実行できます。
+
+        ```sh
+        npx @stormcat-works/stormmin input.lua -o output.lua
+        ```
+      </Step>
+      <Step title="minify を実行する">
+        入力ファイルを指定し、`-o` で出力先を指定します。
+
+        ```sh
+        stormmin input.lua -o output.lua
+        ```
+
+        標準入力/標準出力も使えます。
+
+        ```sh
+        cat input.lua | stormmin > output.lua
+        ```
+      </Step>
+      <Step title="結果を確認する">
+        `--json` を付けると、圧縮後コードだけでなく元のサイズ・削減量・診断情報などを含む JSON が出力されます。
+
+        ```sh
+        echo 'function onTick() output.setNumber(1,1+2) end' | stormmin --json
+        ```
+      </Step>
+    </Steps>
+
+    CLI の全オプションは [CLI リファレンス](/tools/stormworks/stormmin/reference/cli) を参照してください。native バイナリを直接使いたい場合は、GitHub Release から `stormmin-vX.Y.Z-<target>.tar.gz`（Windows は `.zip`）形式のアーカイブを入手できます。`<target>` は `linux-x64` / `win32-x64` / `darwin-arm64` / `darwin-x64` の 4 種類です。
+  </Tab>
+  <Tab title="ライブラリ">
+    Node.js またはブラウザから、minify 機能をコードに組み込めます。
+
+    <Steps>
+      <Step title="インストールする">
+        ```sh
+        npm i @stormcat-works/stormmin
+        ```
+      </Step>
+      <Step title="compile を呼び出す">
+        ```js
+        import { compile } from '@stormcat-works/stormmin';
+
+        const result = await compile(source, { mode: 'smallest' });
+        if (!result.ok) throw new Error(result.error);
+        console.log(result.code);
+        ```
+      </Step>
+    </Steps>
+
+    ブラウザでは `compile()` はメインスレッドをブロックせず、内部で Web Worker 上に WASM をロードして実行します。Node.js では同じ WASM を同一プロセス内で同期的にロードして実行します。両者の違いは [ライブラリの使い方](/tools/stormworks/stormmin/guides/library-usage) で説明しています。
+
+    <Note>
+      パッケージが同梱するのはコンパイル済みの WASM/native バイナリのみです。StormMin のコンパイラ本体（Rust）はクローズドソースで、ソースコードは公開されていません。
+    </Note>
+  </Tab>
+</Tabs>
+
+## 次に読むもの
+
+<Columns cols={2}>
+  <Card title="CLI の使い方" icon="terminal" href="/tools/stormworks/stormmin/guides/cli-usage">
+    サブコマンド、`--options` の指定方法、プロジェクトモードでのビルド組み込み手順
+  </Card>
+  <Card title="ライブラリの使い方" icon="code" href="/tools/stormworks/stormmin/guides/library-usage">
+    `compile` / `compileProject` / `analyze` の呼び出し方とオプション
+  </Card>
+  <Card title="require によるモジュール分割" icon="boxes" href="/tools/stormworks/stormmin/guides/modules">
+    複数ファイルの Lua コードを 1 つの vehicle Lua にリンクする方法
+  </Card>
+  <Card title="目標サイズ探索 (OBJ-2)" icon="crosshair" href="/tools/stormworks/stormmin/guides/target-size">
+    8192 文字制限などの目標サイズに到達した時点で探索を打ち切る機能
+  </Card>
+</Columns>

@@ -1,0 +1,108 @@
+---
+title: "診断コードリファレンス"
+sidebarTitle: "診断コード"
+description: "compile/compileProject/analyze が返す Diagnostic の code 一覧とエラーメッセージの読み方"
+---
+
+`compile()`/`compileProject()`/`analyze()`、および CLI の `--json`/`--format json` 出力は、共通の `Diagnostic` スキーマで問題を報告します。
+
+```ts
+{ code: string; severity: "error" | "warning" | "info"; message: string; module?: string; range?: {...} }
+```
+
+`code` は安定な kebab-case 識別子です。廃止されることはあっても、意味の変更や再利用はされません。`message` は常に英語固定で、UI 側でメッセージをローカライズする場合は `code` をキーにしてください。
+
+## エラーメッセージの読み方
+
+- `syntax-error` のメッセージは、パーサ/レキサーがそのまま返す文字列です。例: `expected expression at 1:11, got )`。`行:列` の位置と、期待していたトークン/実際のトークンが含まれます。
+- `sw-unavailable-global` のメッセージは `"<name>" is a standard Lua builtin but is not available in the Stormworks sandbox.` の形式です。
+- `input-outside-ontick`/`output-outside-ontick` のメッセージはそれぞれ `"input.*" can only be referenced inside onTick().` / `"output.*" can only be referenced inside onTick().` です。
+- `invalid-module-key` のメッセージは発生元で異なります。`modules` のキー自体が命名規則違反のときは `module key "<key>" does not match the module key grammar.`、ambient 名前空間と衝突するときは `module key "<key>" is reserved by the ambient namespace "<name>".` です。CLI の `--modules-dir` 走査で発生した場合は、キーへ変換できないパスなら `"<path>" does not translate to a valid module key (...)`、2 つのパスが同じキーへ解決されたなら `module key "<key>" is produced by both "<path>" and "<path>" (path collision).` になります。
+
+## 診断コード一覧
+
+### プロジェクト構造（常に error）
+
+| コード | 発生条件 |
+| --- | --- |
+| `entry-not-found` | `entry` に指定したモジュールキーが `modules` に存在しない |
+| `invalid-module-key` | モジュールキーが命名規則に合わない、または他のパスとキーが衝突する |
+| `module-not-found` | `require` が参照するモジュールキーが `modules` に存在しない |
+| `require-cycle` | モジュール間の `require` が循環している |
+| `syntax-error` | Lua として構文的に不正 |
+
+### require の制約（常に error）
+
+| コード | 発生条件 |
+| --- | --- |
+| `require-not-top-level` | `require` がモジュールのトップレベル以外（ネストしたブロックなど）で呼び出されている |
+| `require-not-statement` | `require` の呼び出し方が、リンク時に静的解決できない形になっている |
+| `require-dynamic` | `require` の引数が定数のモジュールキー文字列ではない |
+| `require-in-ambient` | ambient 名前空間内で `require` を呼び出している |
+
+### ambient 名前空間の制約（常に error）
+
+| コード | 発生条件 |
+| --- | --- |
+| `unknown-ambient-member` | `ambient` 定義に存在しないメンバーを参照している |
+| `environment-only-api` | `environmentOnly` として宣言された ambient メンバーを、モジュールとして参照しようとしている |
+| `ambient-root-escapes` | ambient のルート名前空間をエスケープする参照をしている |
+| `ambient-dynamic-access` | ambient 名前空間への動的（非定数キー）アクセスをしている |
+| `ambient-assigned` | ambient 名前空間に代入しようとしている |
+
+### 最適化の前提を崩しうるパターン（compile 実行時、warning）
+
+| コード | 発生条件 |
+| --- | --- |
+| `env-access` | `_ENV` への参照がある |
+| `dynamic-table-key` | `rawget`/`rawset` を呼び出している |
+| `unsupported-api-call` | `load`/`loadstring`/`setmetatable`/`getmetatable`/`pcall`/`xpcall`/`print` を呼び出している |
+| `compile-failed` | 上記以外のコンパイルパイプライン内部エラー（`syntax-error` とは別扱い） |
+
+### lint（analyze 実行時、warning）
+
+| コード | 発生条件 |
+| --- | --- |
+| `undefined-global` | どこにも代入されていないグローバル変数を参照している |
+| `unused-local` | 使われていないローカル変数 |
+| `unused-parameter` | 使われていない関数引数 |
+| `unused-loop-variable` | 使われていない for ループ変数 |
+| `shadowed-local` | 既存のローカル変数をシャドウするローカル変数の宣言 |
+
+### Stormworks サンドボックス固有の制限（severity は呼び出し方に依存）
+
+| コード | 発生条件 | `analyze()` | `compileProject()` |
+| --- | --- | --- | --- |
+| `sw-unavailable-global` | 標準 Lua のビルトインだが Stormworks に存在しないグローバルを参照 | warning | error |
+| `input-outside-ontick` | `onTick` の外で `input.*` を参照 | warning | error |
+| `output-outside-ontick` | `onTick` の外で `output.*` を参照 | warning | error |
+
+### 抑制ディレクティブ（常に error）
+
+| コード | 発生条件 |
+| --- | --- |
+| `unknown-storm-directive` | ソース中の `--@storm ...` 形式のディレクティブが認識できない形式・引数を持つ（未知の指示はサイレントに無視されません） |
+
+## 診断の抑制
+
+抑制の手段は 2 つあり、どちらも `analyze()`（ライブラリ）と `stormmin lint`（CLI）でのみ機能します。`compileProject()`/`compile()` の診断には適用されません。また、どちらも `severity: error` の診断は抑制できません。
+
+### disabledRules オプション
+
+`analyze()`/`lint` の `disabledRules` に診断コードの配列を渡すと、プロジェクト全体でその `severity: warning` の診断が抑制されます。
+
+### `--@storm ignore(...)` 行コメント
+
+ソース中の行コメントで、1 行単位に個別の診断を抑制できます。
+
+```lua
+function onTick()
+  local x = foo  --@storm ignore(undefined-global)
+end
+```
+
+- 構文は `--@storm ignore(<診断コード>)` です。`<診断コード>` は英数字と `-` のみで構成される必要があり、空にはできません。
+- 抑制されるのは**同じ行**に付いた同じコードの診断だけです。前の行や次の行には効きません。抑制対象を持たない診断（位置情報のない診断など）にも効きません。
+- 対象コードは 1 コメントにつき 1 つです。複数を抑制するには、同じ行に `--@storm ignore(...)` を並べて書きます。
+- 有効なのは `--` 形式の行コメントのみで、`--[[ ]]` のロングコメント内に書いても認識されません。
+- `--@storm` で始まるコメントのうち、この形式に合わないものは**サイレントに無視されず** `unknown-storm-directive`（`severity: error`）として報告されます。メッセージは `unrecognized "--@storm" directive: "<コメント全文>".` です。`--@storm bogus` や `--@storm ignore()` はこれに該当します。
