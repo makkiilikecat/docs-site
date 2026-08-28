@@ -55,7 +55,7 @@ description: "よくある質問とエラーへの対処"
     npm パッケージの CLI は、実行環境に対応する native バイナリ（`linux-x64` / `win32-x64` / `darwin-arm64` / `darwin-x64`）が同梱されていればそれを使い、無ければ Node 向け WASM 実装に自動でフォールバックします。ただしフォールバック側は単一ファイルの minify のみに対応しており、`compile`/`lint` サブコマンドやプロジェクトモードのフラグを渡すと `unknown option` エラーになります。特定プラットフォーム向けの native バイナリ単体が必要な場合は、GitHub Release から `stormmin-vX.Y.Z-<target>.tar.gz`（Windows は `.zip`）形式のアーカイブを取得してください。なお `npx` で実行する場合はパッケージ名を明示して `npx @stormcat-works/stormmin ...` としてください。
   </Accordion>
 
-  <Accordion title="Web 版の出力コードは安全に使えますか">
-    Web 版は現時点で β 版です。画面には常に「β版につき、出力コードにコンパイラ起因のバグが含まれる可能性があります。ゲーム内で必ず動作確認してください。」という警告が表示されます。minify 後のコードは、ビークルに反映する前に必ずゲーム内で動作確認してください。
+  <Accordion title="出力コードはそのまま使えますか">
+    StormMin は Web 版・CLI・ライブラリのすべてが β 版 (バージョン 1.0 未満) です。Web 版の画面には常に「β版につき、出力コードにコンパイラ起因のバグが含まれる可能性があります。ゲーム内で必ず動作確認してください。」という警告が表示されます。CLI やライブラリで minify した場合も同じです。minify 後のコードは、ビークルに反映する前に必ずゲーム内で動作確認してください。
   </Accordion>
 </AccordionGroup>
