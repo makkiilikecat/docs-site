@@ -1,0 +1,80 @@
+---
+title: "HTTP API リファレンス"
+sidebarTitle: "HTTP API"
+description: "ブラウザを使わずに Lua コードを生成する HTTP エンドポイント"
+---
+
+Physics Frame Codegen は、ブラウザの UI を経由せずに Lua コードを生成できる HTTP API を公開しています。認証は不要で、CORS（`Access-Control-Allow-Origin: *`）に対応しています。AI アシスタントなど、HTTP リクエストを送れるツールから直接コード生成を依頼する用途を想定しています。
+
+| エンドポイント | メソッド | 内容 |
+|---|---|---|
+| `/tools/stormworks/physics-codegen/api/generate` | `POST` | リクエストボディの JSON から Lua コードを生成する |
+| `/tools/stormworks/physics-codegen/api/example` | `GET` | `/api/generate` に投げられるサンプルリクエストボディを返す（`request` フィールドに格納） |
+| `/tools/stormworks/physics-codegen/api/schema` | `GET` | この API と JSON スキーマの説明を Markdown で返す |
+
+すべてのパスは `https://www.makkii.jp` を前置してアクセスします。
+
+## `POST /api/generate`
+
+リクエストボディには、[セーブ管理と設定の入出力](/tools/stormworks/physics-codegen/reference/data)でエクスポートされる設定 JSON と同じ形式のオブジェクトを渡します。`settings` や `frames` の一部のフィールドを省略した場合、既定値で補われます。`frames` 配列自体が無い場合は、エラーにはならずアプリの初期サンプル構成が使われます。
+
+```bash
+curl -X POST "https://www.makkii.jp/tools/stormworks/physics-codegen/api/generate" \
+  -H "Content-Type: application/json" \
+  --data '{"frames":[{"name":"center","outputs":{"world":{"x":true,"y":true,"z":true}}}]}'
+```
+
+既定では JSON レスポンスを返します。
+
+```json
+{
+  "ok": true,
+  "lua": "-- 生成された Lua コード全文",
+  "stats": {
+    "rawLength": 0,
+    "compactLength": 0,
+    "minifyEstimateLength": 0,
+    "targetChars": 8192,
+    "remaining": 0
+  },
+  "warnings": {
+    "duplicateNames": [],
+    "dynamicCount": 0,
+    "outputCount": 0
+  }
+}
+```
+
+- `rawLength`: 生成されたコードそのものの文字数
+- `compactLength`: コメント・空白を単純に削った場合の推定文字数
+- `minifyEstimateLength`: local 識別子の短縮も模した推定文字数
+- `remaining`: `targetChars - minifyEstimateLength`
+- `warnings.duplicateNames`: 名前が重複しているオフセットの一覧
+- `warnings.dynamicCount`: 動的オフセットの個数
+- `warnings.outputCount`: 生成される出力変数の総数
+
+`minifyEstimateLength` は実際の Lua minifier の結果と一致するとは限りません。使用する minifier で最終的な文字数を確認してください。
+
+### Lua を直接返す
+
+クエリパラメータ `?format=lua` を付けるか、リクエストヘッダーに `Accept: text/plain` を指定すると、JSON エンベロープの代わりに生成された Lua コードそのものをプレーンテキストで返します。
+
+```bash
+curl -X POST "https://www.makkii.jp/tools/stormworks/physics-codegen/api/generate?format=lua" \
+  -H "Content-Type: application/json" \
+  --data '{"frames":[{"name":"center","outputs":{"world":{"x":true,"y":true,"z":true}}}]}'
+```
+
+### エラー
+
+- `POST` 以外のメソッドでアクセスすると `405` を返します。
+- リクエストボディが JSON として解析できない場合、`400` と `{"ok": false, "error": "invalid JSON body"}` を返します。
+- コード生成自体が失敗した場合も `400` を返します。
+
+## `GET /api/example`
+
+サンプル構成（静的な `center` オフセットと動的な `rotor`/`camera` オフセット）を `{ "description": ..., "request": ... }` の形で返します。`request` の中身がそのまま `/api/generate` に投げられるリクエストボディです。
+
+## `GET /api/schema`
+
+この API の説明と JSON スキーマをまとめた Markdown ドキュメントを返します。UI の「AIプロンプト」ボタンで表示される内容と同じ文書です。

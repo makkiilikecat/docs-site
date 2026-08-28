@@ -17,7 +17,27 @@
         "groups": [
           {
             "group": "はじめに",
-            "pages": ["tools/stormworks/physics-codegen/index"]
+            "pages": [
+              "tools/stormworks/physics-codegen/index",
+              "tools/stormworks/physics-codegen/quickstart"
+            ]
+          },
+          {
+            "group": "ガイド",
+            "pages": ["tools/stormworks/physics-codegen/guides/frames"]
+          },
+          {
+            "group": "リファレンス",
+            "pages": [
+              "tools/stormworks/physics-codegen/reference/settings",
+              "tools/stormworks/physics-codegen/reference/outputs",
+              "tools/stormworks/physics-codegen/reference/data",
+              "tools/stormworks/physics-codegen/reference/api"
+            ]
+          },
+          {
+            "group": "FAQ",
+            "pages": ["tools/stormworks/physics-codegen/faq"]
           }
         ]
       },
