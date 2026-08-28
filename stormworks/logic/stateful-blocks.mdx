@@ -1,0 +1,73 @@
+---
+title: "ステートフルブロック"
+sidebarTitle: "ステートフルブロック"
+description: "タイマー・カウンター・ラッチ・PIDなど内部状態を持つロジックブロック"
+---
+
+このページのブロックは、出力が現在の入力だけでなく内部状態にも依存します。状態はビークルが読み込まれている間、ティックをまたいで保持されます。
+
+## メモリ・ラッチ
+
+| ブロック | 入力 | 出力 | 動作 |
+| --- | --- | --- | --- |
+| Memory Register | Number (value), On/Off (store), On/Off (reset) | Number×1 | `store` が On のときに入力値をラッチする。`reset` が On のとき、プロパティで設定したデフォルト値に戻る |
+| SR Latch | On/Off×2 (Set, Reset) | On/Off×2 (Q, ¬Q) | Set が On → Q=On。Reset が On → Q=Off。**両方 On のときは Q・¬Q の両出力が Off**（無効状態） |
+| JK Flip Flop | On/Off×2 (J=Set, K=Reset) | On/Off×2 (Q, ¬Q) | 両方 Off → 変化なし。J のみ On → Set。K のみ On → Reset。**両方 On になった立ち上がりで Q をトグル**し、On が続く間は再トグルしない |
+| Push To Toggle | On/Off×1 | On/Off×1 | On 信号が新しく入るたびに、内部状態をトグルする |
+
+<Note>
+JK Flip Flop はクロック入力を持たない2入力（J・K）のブロックです。
+</Note>
+
+## タイマー・時間
+
+タイマーは秒単位・ティック単位のどちらでも設定できます。
+
+| ブロック | 入力 | 出力 | 動作 |
+| --- | --- | --- | --- |
+| Timer (TON) | On/Off (enable), Number (duration) | On/Off×1 | `enable` が **連続で** `duration` に達すると On になる。`enable` が Off になると経過時間はリセットされる |
+| Timer (TOF) | On/Off (enable), Number (duration) | On/Off×1 | `enable` が On の間、経過時間が `duration` に達するまで On。`enable` が Off になると経過時間はリセットされ、出力も Off になる |
+| Timer (RTO) | On/Off (enable), Number (duration) | On/Off×1 | `enable` が **累積で** `duration` に達すると On になる。`enable` が Off になっても経過時間は**リセットされない**。明示的なリセット信号が必要 |
+| Timer (RTF) | On/Off (enable), Number (duration) | On/Off×1 | 累積 `duration` に達するまで On。`enable` が Off になっても経過時間は**リセットされない** |
+| Capacitor | On/Off×1 | On/Off×1 | On 入力で充電し、設定時間で満充電になると On を出力する。Off で放電し、設定時間で空になると Off に戻る。放電中に新しい On 信号が来ると放電タイマーがリセットされる |
+| Blinker | On/Off (control) | On/Off×1 | `control` が On の間、設定した On 期間・Off 期間（それぞれ 0.1〜5.0 秒）で交互に発振する。`control` が Off になると出力は Off になりタイマーもリセットされる |
+| Delay | On/Off×1 | On/Off×1 | 入力の変化を設定時間（0.1〜5.0 秒）だけ遅延させて反映する。遅延待ち中に入力が再び変化するとタイマーがリセットされる |
+
+<Warning>
+TOF は「入力が Off になってから一定時間 On を維持する」タイマーではありません。入力が On の間、設定した時間だけ On を出力し、その後 Off になる動作です。
+</Warning>
+
+## カウンター
+
+| ブロック | 入力 | 出力 | 動作 |
+| --- | --- | --- | --- |
+| Counter | On/Off (enable) | Number×1 | `enable` が On の間、設定した速度で継続的に増加する |
+| Counter (Ping Pong) | On/Off (enable) | Number×1 | -1 と +1 の間を設定した速度で往復する |
+| Up/Down Counter | On/Off (increment), On/Off (decrement), On/Off (reset) | Number×1 | 信号ごとに設定した単位で増減する。クランプが有効なら最小値・最大値で制限する。リセットで設定値に戻る |
+
+## 変化検出・値生成
+
+| ブロック | 入力 | 出力 | 動作 |
+| --- | --- | --- | --- |
+| Up/Down | On/Off×2 (up, down) | Number×1 | Up が On なら値を正方向に、Down が On なら負方向に移動させる。最小値・最大値・初期値を設定できる |
+| Delta | Number×1 | Number×1 | `output = input - 前回のinput` |
+| Pulse (Toggle to Push) | On/Off×1 | On/Off×1 | エッジ検出。Off→On、On→Off、または両方のいずれかで、切り替わった1ティックだけ `true` を出力する |
+
+## 制御
+
+| ブロック | 入力 | 出力 | 動作 |
+| --- | --- | --- | --- |
+| PID Controller | Number (process variable), Number (setpoint) | Number×1 | `e = process variable - setpoint` として `P*e + I*積算(e) + D*(e - 前回のe)` を出力する。時間刻み幅を掛ける処理は行わない |
+| PID Controller (Advanced) | Number×5 (PV, SP, P, I, D) | Number×1 | 通常の PID Controller と同じ離散式で、ゲインを入力ピンから動的に受け取る |
+
+## Property（プロパティ入力）
+
+Property ブロックは、マイクロコントローラーのプロパティパネルに UI 項目を追加します。入力を持たず、出力のみです。
+
+| ブロック | 出力 | UI |
+| --- | --- | --- |
+| Property Slider | Number×1 | スライダー。最小値・最大値・整数制限・初期値を設定できる |
+| Property Dropdown | Number×1 | ドロップダウンリスト。選択したラベルに対応する数値を出力する |
+| Property Toggle | On/Off×1 | トグルスイッチ。On/Off それぞれのラベルを設定できる |
+| Property Number | Number×1 | 数値入力フィールド |
+| Property Text | (Lua スクリプトからのみ参照可能) | テキスト入力フィールド |

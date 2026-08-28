@@ -1,0 +1,135 @@
+---
+title: "Lua スクリプトブロック"
+sidebarTitle: "Lua スクリプト"
+description: "Lua Scriptブロックの実行モデル、input/output/property/screen/map API、利用可能な標準ライブラリ"
+---
+
+Lua Script ブロック（マイクロコントローラー内部の type 56）は、マイクロコントローラー内で Lua コードを実行します。ゲーム本体が提供する Lua 環境は Lua 5.3 相当です。
+
+## 基本制約
+
+- スクリプトの長さは **最大 8192 文字**です。
+- ピン構成は固定です。`in1` = Composite 入力、`in2` = Video 入力、`out1` = Composite 出力、`out2` = Video 出力。
+- Composite の入出力チャンネルは 1〜32 で扱います（[信号モデル](/stormworks/logic/signal-model) を参照）。
+
+## onTick と onDraw
+
+スクリプトは `onTick()` と `onDraw()` という2つの関数（定義してあれば呼ばれる）を中心に動作します。
+
+### onTick()
+
+- 物理ティックごとに呼び出されます（60Hz）。引数はありません。
+- `input.*` / `output.*` はこの関数の中でのみ呼び出せます。`screen.*` はここでは呼べません。
+- 実行に **16ms** を超えると、物理エンジンの進行が遅くなります。
+
+### onDraw()
+
+- `onTick()` の直後、**接続されている電源オンのモニター1台につき1回**呼び出されます。モニターが接続されていなければ呼ばれません。
+- `screen.*` はこの関数の中でのみ呼び出せます。`input.*` / `output.*` はここでは呼べません。
+- `onTick()` で読んだ値を変数に保存しておき、`onDraw()` で使うのが基本的な書き方です。
+- ゲームが一時停止している間は `onTick()` / `onDraw()` のどちらも呼ばれません。
+
+<Warning>
+`onTick()` / `onDraw()` を含め、Lua が呼び出されるあらゆる場面で実行時間が **1000ms** を超えると、その Lua はクラッシュします。クラッシュするとエラー画面が表示され、以降そのスクリプトは処理されなくなります。復帰するにはワークベンチに戻る必要があります。
+</Warning>
+
+## Composite I/O
+
+Composite 信号のチャンネル 1〜32 に対して読み書きします。
+
+| 関数 | 説明 |
+| --- | --- |
+| `input.getNumber(ch)` | チャンネル `ch`（1〜32）の Number 値を読む |
+| `input.getBool(ch)` | チャンネル `ch`（1〜32）の Boolean 値を読む |
+| `output.setNumber(ch, val)` | チャンネル `ch` に Number 値を書く |
+| `output.setBool(ch, val)` | チャンネル `ch` に Boolean 値を書く |
+
+<Note>
+`output.setNumber` / `output.setBool` で一度書いた値は、次に上書きするまで保持されます。毎ティック `0` にリセットされるわけではありません。
+</Note>
+
+## Property API
+
+マイクロコントローラーのプロパティパネルに配置した Property ブロックの値を読みます。ラベルは大文字・小文字を区別します。
+
+| 関数 | 説明 |
+| --- | --- |
+| `property.getNumber(label)` | Property Number / Slider / Dropdown の値を取得する |
+| `property.getBool(label)` | Property Toggle の値を取得する |
+| `property.getText(label)` | Property Text の文字列を取得する |
+
+## Screen API（onDraw 内のみ）
+
+```lua
+screen.setColor(r, g, b)      -- 描画色を設定。RGB は 0〜255、α は省略時 255
+screen.drawClear()             -- 画面を現在色で塗りつぶす
+screen.drawLine(x1, y1, x2, y2)
+screen.drawRect(x, y, w, h)
+screen.drawRectF(x, y, w, h)   -- 塗りつぶし矩形
+screen.drawCircle(x, y, r)
+screen.drawCircleF(x, y, r)    -- 塗りつぶし円
+screen.drawTriangle(x1, y1, x2, y2, x3, y3)
+screen.drawTriangleF(x1, y1, x2, y2, x3, y3)
+screen.drawText(x, y, text)
+screen.drawTextBox(x, y, w, h, text, h_align, v_align)
+screen.drawMap(x, y, zoom)
+screen.getWidth()
+screen.getHeight()
+```
+
+`screen.drawText` のフォントサイズは固定で、1文字4×5ピクセルです。`screen.getWidth()` / `screen.getHeight()` はモニターの解像度をピクセル単位で返し、モニター1ブロックあたり32ピクセルです。
+
+`screen.setMapColorOcean` / `screen.setMapColorLand` などのマップ描画用の色設定関数もあります(Ocean・Shallows・Land・Grass・Sand・Snow・Rock・Gravel の各要素に対応)。
+
+## Map API
+
+```lua
+map.screenToMap(mapX, mapY, zoom, screenW, screenH, pixelX, pixelY)
+map.mapToScreen(mapX, mapY, zoom, screenW, screenH, worldX, worldY)
+```
+
+画面上のピクセル座標とワールド座標を相互変換します。どちらも2つの値を返します。
+
+## HTTP API
+
+```lua
+async.httpGet(port, url)
+```
+
+`localhost` への GET リクエストを送信します。1ティックにつき1リクエストまでです。応答は `httpReply(port, request, response)` というコールバック関数で受け取ります。
+
+## タッチスクリーン入力
+
+タッチスクリーン対応モニターを接続すると、Composite 入力に次のチャンネルが自動的に設定されます。
+
+| チャンネル | 型 | 内容 |
+| --- | --- | --- |
+| Number 1〜2 | Number | スクリーンの幅、高さ |
+| Number 3〜4 | Number | プライマリタッチの X, Y |
+| Number 5〜6 | Number | セカンダリタッチの X, Y |
+| Bool 1 | On/Off | プライマリタッチ中か |
+| Bool 2 | On/Off | セカンダリタッチ中か |
+
+<Note>
+タッチが離されると Bool のタッチ中フラグは `false` になりますが、X・Y の座標値は最後にタッチしていた値を保持し続けます。
+</Note>
+
+## 利用可能な標準ライブラリ
+
+| ライブラリ | 利用できる関数 |
+| --- | --- |
+| グローバル | `pairs`, `ipairs`, `next`, `tostring`, `tonumber`, `type`, `select`, `unpack`, `pcall`, `error` |
+| `math` | `abs`, `ceil`, `floor`, `max`, `min`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`, `log`, `exp`, `pi`, `huge`, `random`, `randomseed`, `deg`, `rad`, `fmod`, `modf` |
+| `string` | `format`, `sub`, `len`, `find`, `gsub`, `upper`, `lower`, `rep`, `reverse`, `byte`, `char`, `match`, `gmatch` |
+| `table` | `insert`, `remove`, `sort`, `concat`, `unpack`, `move`, `pack` |
+
+`math.atan` は1引数・2引数のどちらの呼び出し方にも対応しますが、`math.atan2` という別名の関数は存在しません。
+
+<Warning>
+`io`, `os`, `require`, `load`, `dofile`, `loadfile`, `debug`, `rawset`, `rawget` は使用できません。`print` によるコンソール出力もありません。
+</Warning>
+
+## その他の注意点
+
+- Lua はサーバーと各クライアントで独立して実行されます。マルチプレイでは `math.random()` の結果がクライアントごとに異なります。Composite の入出力は同期されますが、`screen.*` による描画結果はクライアントごとに異なる場合があります。
+- ビークルがアンロード（デスポーン）されると、Lua のすべての変数がリセットされます。ティックをまたいで値を保持したい場合は、Memory Register ブロックなどロジック側の状態を使う必要があります。
