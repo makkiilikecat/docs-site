@@ -1,0 +1,160 @@
+---
+title: "マイクロコントローラー XML"
+sidebarTitle: "マイクロコントローラー XML"
+description: "microprocessor_definition のデータ構造、ブロック種別ID、外部ピンと内部配線"
+---
+
+マイクロコントローラー（MC）の内部回路は、ビークル XML の中に `<microprocessor_definition>` 要素としてインラインで埋め込まれます。このページでは、その内部データ構造をまとめます。
+
+## 全体構造
+
+```xml
+<microprocessor_definition
+    name="Horizon" width="4" length="1"
+    id_counter="13" id_counter_node="4">
+
+  <nodes>
+    <!-- マイコンの外側のピン（他ブロックとの接点） -->
+    <n id="1" component_id="5">
+      <node label="X" type="1" mode="1">
+        <position x="1"/>
+      </node>
+    </n>
+  </nodes>
+
+  <group>
+    <data><inputs/><outputs/></data>
+
+    <components>
+      <!-- 内部ロジックブロック本体 -->
+      <c type="56">
+        <object id="10" script="...">
+          <pos x="2.5" y="-0.75"/>
+          <in1 component_id="11"/>
+          <in2 component_id="6"/>
+        </object>
+      </c>
+    </components>
+
+    <components_bridge>
+      <!-- 外部ピンに対応する境界コンポーネント -->
+      <c type="2"><object id="5"><pos x="0" y="0"/></object></c>
+    </components_bridge>
+
+    <groups/>
+  </group>
+</microprocessor_definition>
+```
+
+### 属性
+
+| 属性 | 説明 |
+| --- | --- |
+| `width` / `length` | 内部編集グリッドの寸法。マイクロコントローラーの外形（占有ボクセル）を決める |
+| `id_counter` | `<components>` 内の `<object id>` の採番カウンタ |
+| `id_counter_node` | `<nodes>` 内の `<n id>` の採番カウンタ（`id_counter` とは別系列） |
+| `name` | マイクロコントローラーの名前 |
+| `description` | 説明文 |
+| `sym0`〜`sym15` | サムネイルアイコンのビットマップ（下記参照） |
+
+`id_counter` と `id_counter_node` は「次に配る ID」ではなく、それぞれの系列で過去に配った最大 ID を保持する値です。ブロックを削除しても値は減りません。オブジェクト系列（`<object id>`）とノード系列（`<n id>`）は別の ID 空間で、同じ数値が両方に同時に存在することがあります。
+
+### sym0〜sym15 — サムネイルアイコン
+
+マイクロコントローラーのインベントリや選択時に表示される、16×16 ピクセルの2値ビットマップです。`symN`（N=0〜15）が1行を表し、各行は16ビットの整数値です。最上位ビット（`1 << 15` = 32768）が一番左のピクセル、最下位ビット（`1 << 0` = 1）が一番右のピクセルに対応します。
+
+## 内部ブロック `<components>/<c type="N">`
+
+内部のロジックブロックは、`type` 属性の数値でブロック種別を表します。`<object>` が実体で、ID・座標・入力ピン・種別ごとのプロパティを持ちます。
+
+### ブロック種別 ID（type 0〜59）
+
+| type | ブロック名 | type | ブロック名 |
+| ---: | --- | ---: | --- |
+| 0 | NOT | 30 | Composite Write (on/off、旧) |
+| 1 | AND | 31 | Composite Read (number、旧) |
+| 2 | OR | 32 | Composite Write (number、旧) |
+| 3 | XOR | 33 | Property Toggle |
+| 4 | NAND | 34 | Property Number |
+| 5 | NOR | 35 | Delta |
+| 6 | Add | 36 | f(x,y,z,w,a,b,c,d) |
+| 7 | Subtract | 37 | Up/Down Counter |
+| 8 | Multiply | 38 | Modulo (fmod) |
+| 9 | Divide | 39 | PID Controller (Advanced) |
+| 10 | f(x, y, z) | 40 | Composite Write (number) |
+| 11 | Clamp | 41 | Composite Write (bool) |
+| 12 | Threshold | 42 | Equal |
+| 13 | Memory Register | 43 | Tooltip Number |
+| 14 | Abs | 44 | Tooltip On/Off |
+| 15 | Constant Number | 45 | f(x) |
+| 16 | Constant On Signal | 46 | Boolean f(x,y,z,w) |
+| 17 | Greater Than | 47 | Boolean f(x,y,z,w,a,b,c,d) |
+| 18 | Less Than | 48 | Pulse (Toggle to Push) |
+| 19 | Property Slider | 49 | Timer (TON) |
+| 20 | Property Dropdown | 50 | Timer (TOF) |
+| 21 | Numerical junction | 51 | Timer (RTO) |
+| 22 | Numerical Switchbox | 52 | Timer (RTF) |
+| 23 | PID Controller | 53 | Composite Switchbox |
+| 24 | SR Latch | 54 | Number To Composite Binary |
+| 25 | JK Flip Flop | 55 | Composite Binary To Number |
+| 26 | Capacitor | 56 | Lua Script |
+| 27 | Blinker | 57 | Video Switchbox |
+| 28 | Push To Toggle | 58 | Property Text |
+| 29 | Composite Read (on/off、旧) | 59 | Audio Switchbox |
+
+<Note>
+type 29〜32 は旧世代の Composite ブロックで、互換性維持のためゲーム内に残っています。現在配置できる Composite Write は type 40/41 です。
+</Note>
+
+Lua Script（type 56）のピン構成は固定で、`in1` = Composite 入力、`in2` = Video 入力、`out1` = Composite 出力、`out2` = Video 出力です。
+
+### 配置座標
+
+内部エディタのグリッドは 0.25 単位です。ノードブロックの幅は 1（4マス）です。配置の Y 座標は底辺基準で、高さの異なるブロックを同じ Y 座標に並べると下端がそろいます。
+
+<Note>
+マイクロコントローラー内部のブロック配置（`<pos>`）は見た目だけの情報で、回路の動作には影響しません。
+</Note>
+
+## 配線モデル
+
+マイクロコントローラー内部の配線は、エッジの明示的なリストを持ちません。代わりに、各ブロックの入力ピン（`in1`、`in2`…）が「どのブロックの出力を参照するか」を保持する参照方式です。
+
+- 出力側が複数のポートを持つ場合、入力ピンの `node_index` 属性でどのポートを参照するか選択します。
+- **入力ピンは1つにつき1接続、出力は分岐自由**です（複数の入力ピンが同じ出力を参照できます）。
+- `component_id="0"` は「未接続」を表す特別な値です。マイクロコントローラー内に ID `0` のブロックが存在することはありません。
+
+## 外部ピンと境界
+
+マイクロコントローラーを外から見たときの入出力ピンは `<nodes>/<n>` で定義され、それぞれが `<components_bridge>` 内の境界ブロックに対応します。
+
+### ピンのデータ型 (`<node>/@type`)
+
+ロジック接続の型 ID と共通の体系です。
+
+| type | データ型 | マイコンで使用可能 |
+| ---: | --- | --- |
+| 0 (省略時) | On/Off (Boolean) | ✓ |
+| 1 | Number | ✓ |
+| 2 | Power（機械動力） | ✗ |
+| 3 | Fluid | ✗ |
+| 4 | Electric | ✗ |
+| 5 | Composite | ✓ |
+| 6 | Video | ✓ |
+| 7 | Audio | ✓ |
+| 8 | Rope | ✗ |
+
+### ピンの方向 (`<node>/@mode`)
+
+| mode | 方向 |
+| ---: | --- |
+| 0 (省略時) | 出力 |
+| 1 | 入力 |
+
+## 車両レベルの配線
+
+マイクロコントローラー**間**、およびブロック**間**の配線は、マイクロコントローラー定義の外側、ビークル直下の要素にボクセル座標のペアとして記述されます。マイクロコントローラー内部の配線とは別のレイヤーです。
+
+## Composite チャンネルの内部表現
+
+マイクロコントローラー内部の XML では、Composite チャンネル番号は **0始まり（0〜31）** で保持されます。ゲーム内 UI やプロパティで表示・入力するチャンネル番号は **1始まり（1〜32）** です。ブロックのプロパティでチャンネル番号を動的に指定する場合、指定用のピンに渡す値は1始まりの表示番号がそのまま使われます。

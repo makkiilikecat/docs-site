@@ -1,0 +1,105 @@
+---
+title: "ロジックブロック"
+sidebarTitle: "ロジックブロック"
+description: "論理ゲート・算術・比較・ルーティング・Composite操作ブロックのカタログ"
+---
+
+このページでは、出力が現在の入力だけで決まる（内部状態を持たない）ロジックブロックをまとめます。タイマーやカウンターなど、状態を持つブロックは [ステートフルブロック](/stormworks/logic/stateful-blocks) を参照してください。
+
+## 論理ゲート
+
+すべて On/Off (Boolean) 入出力です。
+
+| ブロック | 入力 | 評価 |
+| --- | --- | --- |
+| NOT | 1 | `!a` |
+| AND | 2 | `a && b` |
+| OR | 2 | `a \|\| b` |
+| XOR | 2 | `a ^ b` |
+| NAND | 2 | `!(a && b)` |
+| NOR | 2 | `!(a \|\| b)` |
+| Constant On Signal | — | 常に `true` を出力 |
+
+## 算術
+
+すべて Number 入出力です。
+
+| ブロック | 入力 | 評価 |
+| --- | --- | --- |
+| Add | 2 | `a + b` |
+| Subtract | 2 | `a - b` |
+| Multiply | 2 | `a * b` |
+| Divide | 2 | `a / b`。詳細は下記 |
+| Clamp | 1 + プロパティ `min`/`max` | `clamp(x, min, max)` |
+| Abs | 1 | `\|x\|` |
+| Constant Number | — | プロパティで設定した固定値を出力 |
+| Modulo | 2 | `fmod(a, b)` |
+| Numerical Inverter | 1 | `-x` |
+| Exponent | 1 + プロパティ `exp` | `x ^ exp` |
+| Trigonometry | 1 | sin/cos/tan/asin/acos/atan をプロパティで選択。**単位はターン**（0.25 = 90°） |
+
+<Warning>
+Divide ブロックはゼロ除算で `0.0` を返します。IEEE 754 標準のように NaN や無限大にはなりません。同時にエラー用の On/Off 出力が On になります。
+</Warning>
+
+## 比較（Number → On/Off 変換）
+
+| ブロック | 入力 | 評価 |
+| --- | --- | --- |
+| Threshold Gate | Number×1 + プロパティ `min`/`max` | `min <= x && x <= max` なら On |
+| Greater Than | Number×2 | `a > b` |
+| Less Than | Number×2 | `a < b` |
+| Equal | Number×2 + プロパティ `tolerance` | `\|a - b\| <= tolerance` なら On |
+
+## ルーティング
+
+| ブロック | 入力 | 出力 | 評価 |
+| --- | --- | --- | --- |
+| Numerical Junction | Number×1, On/Off×1 | Number×2 | スイッチ Off → 出力1に値・出力2は0。On → 出力2に値・出力1は0 |
+| Numerical Switchbox | Number×2, On/Off×1 | Number×1 | On → 入力1を出力。Off → 入力2を出力 |
+
+## Function（式評価）
+
+入力の数と型が異なる複数のバリエーションがあります。式は各ブロックのプロパティとして設定します。
+
+| ブロック | 入力 | 出力 |
+| --- | --- | --- |
+| f(x) | Number×1 | Number×1 |
+| f(x, y, z) | Number×3 | Number×1 |
+| f(x, y, z, w, a, b, c, d) | Number×8 | Number×1 |
+| Boolean f(x, y, z, w) | On/Off×4 | On/Off×1 |
+| Boolean f(x, y, z, w, a, b, c, d) | On/Off×8 | On/Off×1 |
+
+式の文法は変数 `x, y, z, w, a, b, c, d`（対応する入力の数だけ使用可能）を使う独自の数式言語です。詳細は [Function 式の文法](/stormworks/logic/function-expressions) を参照してください。
+
+## Composite 操作
+
+Composite 信号の詳細は [信号モデル](/stormworks/logic/signal-model) を参照してください。
+
+| ブロック | 入力 | 出力 | 動作 |
+| --- | --- | --- | --- |
+| Composite Read (on/off) | Composite×1 | On/Off×1 | 指定チャンネルの Boolean を読み出す |
+| Composite Read (number) | Composite×1 | Number×1 | 指定チャンネルの Number を読み出す |
+| Composite Write (number) | Composite×1, Number×N | Composite×1 | パススルー + 接続されているチャンネルにだけ書き込む |
+| Composite Write (bool) | Composite×1, On/Off×N | Composite×1 | 同上の Boolean 版 |
+| Composite Switchbox | Composite×2, On/Off×1 | Composite×1 | On → 入力1、Off → 入力2 |
+| Number To Composite Binary | Number×1 | Composite×1 | f32 の各ビットをそのまま Boolean チャンネルへ展開する（チャンネル1=ビット0） |
+| Composite Binary To Number | Composite×1 | Number×1 | 32 個の Boolean チャンネルを IEEE 754 float の生ビット列として再解釈する |
+
+<Note>
+Composite Write ブロックには旧世代のバリエーション（単一チャンネル指定）も存在しますが、現在のゲームでは複数チャンネルを一括指定できる新しいバリエーションが標準的に使われます。
+</Note>
+
+## ツールチップ表示
+
+| ブロック | 入力 | 動作 |
+| --- | --- | --- |
+| Tooltip Number | Number×1 | マイクロコントローラーのツールチップに数値を表示する。表示条件（常時/エラー時/正常時）を設定できる |
+| Tooltip On/Off | On/Off×1 | 同上の Boolean 版 |
+
+## Video / Audio の切替
+
+| ブロック | 動作 |
+| --- | --- |
+| Video Switchbox | On/Off 入力で2つの Video 入力を切り替える（パススルー） |
+| Audio Switchbox | 同上の Audio 版 |

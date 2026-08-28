@@ -189,7 +189,16 @@
           },
           {
             "group": "論理・センサー・マイクロコントローラー",
-            "pages": []
+            "pages": [
+              "stormworks/logic/signal-model",
+              "stormworks/logic/tick-order",
+              "stormworks/logic/logic-blocks",
+              "stormworks/logic/function-expressions",
+              "stormworks/logic/stateful-blocks",
+              "stormworks/logic/microcontroller-xml",
+              "stormworks/logic/sensors-actuators",
+              "stormworks/logic/lua-api"
+            ]
           }
         ]
       }
