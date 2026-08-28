@@ -1,0 +1,61 @@
+---
+title: "FAQ・トラブルシューティング"
+sidebarTitle: "FAQ"
+description: "よくある質問とエラーへの対処"
+---
+
+<AccordionGroup>
+  <Accordion title="Web 版で require を使ったプロジェクトを minify できますか">
+    できません。Web 版は単一ファイルの Lua コードのみに対応しています。複数モジュールをリンクする場合は CLI（`--entry`/`--modules-dir`/`--project`）かライブラリ（`compileProject`）を使ってください。詳しくは [require によるモジュール分割](/stormmin/guides/modules) を参照してください。
+  </Accordion>
+
+  <Accordion title="minify した後にコードの挙動が変わることがありますか">
+    あります。次のようなコードは最適化の前提（クローズドワールドな静的解析、順序付きの screen 副作用など）を崩す可能性があり、コンパイル結果に警告が付きます。
+
+    - `_ENV` への動的なグローバルアクセス（`env-access`）
+    - `rawget`/`rawset` を使ったテーブル操作（`dynamic-table-key`）
+    - `load`/`loadstring`/`setmetatable`/`getmetatable`/`pcall`/`xpcall`/`print` の呼び出し（`unsupported-api-call`）
+
+    これらの詳細は [対応 Lua 構文と意味保存モデル](/stormmin/reference/lua-support) を参照してください。数値計算については、既定の `tolerant` モードでは指定した許容誤差の範囲で近似が行われます。厳密な数値挙動が必要な場合は `numericMode: "exact"` を指定してください。
+  </Accordion>
+
+  <Accordion title='"... is a standard Lua builtin but is not available in the Stormworks sandbox." というエラーが出ます'>
+    `pcall`、`setmetatable`、`os`、`io`、`coroutine`、`debug` など、標準 Lua には存在するが Stormworks のサンドボックスには存在しないグローバルを参照しています（`sw-unavailable-global`）。`analyze()`/`lint` では警告扱いですが、`compileProject()`/CLI での minify 実行では失敗の原因になります。該当箇所を Stormworks で利用可能な API に書き換えてください。利用可能なグローバルルートの一覧は [対応 Lua 構文と意味保存モデル](/stormmin/reference/lua-support) を参照してください。
+  </Accordion>
+
+  <Accordion title='"input.*"/"output.*" can only be referenced inside onTick() というエラーが出ます'>
+    `input.*`/`output.*` は `onTick` コールバックの本体（ネストした内側関数を含む）以外から参照できません。`onTick` の外で呼び出している箇所を、`onTick` 内から呼ばれる関数に移すか、`onTick` の中に直接記述してください。関数呼び出しを経由した間接的な参照は現時点では検出されないため、意図せず `onTick` の外から呼ばれる経路がないかも確認してください。
+  </Accordion>
+
+  <Accordion title='"function(...) ... end" でパースエラーになります'>
+    引数リストが可変長引数のみ（`(...)`）の関数は、名前付き・無名を問わず現在のパーサではパースエラーになります（`function f(...) end` などは `expected expression at <行>:<列>, got )`、文としての `function(...) end` は `expected (, got ... at <行>:<列>`）。`function f(a, ...) end` のように名前付き引数を 1 つ以上前置してください。
+  </Accordion>
+
+  <Accordion title="CLI でプロジェクトの lint だけを行いたい">
+    `stormmin lint` を使います。minify は行わず静的解析だけを実行します。プロジェクトモードが必須です。
+
+    ```sh
+    stormmin lint --entry main --modules-dir src/ --format json
+    ```
+  </Accordion>
+
+  <Accordion title="出力文字数をちょうど 8192 文字以下にしたいだけです。最小化に時間をかけたくありません">
+    `targetSize` オプション（CLI では `--options '{"targetSize":8192}'`、Web 版では「目標文字数」欄）を使ってください。目標サイズ以下の候補が得られた時点で探索を打ち切るため、最小化に比べて短時間で結果が得られます。詳しくは [目標サイズ探索 (OBJ-2)](/stormmin/guides/target-size) を参照してください。
+  </Accordion>
+
+  <Accordion title="Node.js から scanProperties/passMetadata を呼んだら動きません">
+    既知の制限です。`scanProperties`/`passMetadata` はブラウザ環境のエントリーポイントにのみ実装されており、Node.js からは利用できません。`compile`/`compileProject`/`analyze`/`terminate` は両方の環境で利用できます。
+  </Accordion>
+
+  <Accordion title="--options に存在しないキーを指定するとどうなりますか">
+    JSON として妥当であれば、認識されないキー（誤ったオプション名や存在しない pass ID）は無視されるだけでエラーにはなりません。JSON 自体が壊れている場合はエラーになります。オプションが意図通り反映されたかどうかは、CLI なら `--json`/`--format json`、ライブラリなら戻り値の `passes`/`disabledPasses`/`assumptions` などのフィールドで確認してください。
+  </Accordion>
+
+  <Accordion title="native バイナリではなく WASM フォールバックで動いているようです">
+    npm パッケージの CLI は、実行環境に対応する native バイナリ（`linux-x64` / `win32-x64` / `darwin-arm64` / `darwin-x64`）が同梱されていればそれを使い、無ければ Node 向け WASM 実装に自動でフォールバックします。ただしフォールバック側は単一ファイルの minify のみに対応しており、`compile`/`lint` サブコマンドやプロジェクトモードのフラグを渡すと `unknown option` エラーになります。特定プラットフォーム向けの native バイナリ単体が必要な場合は、GitHub Release から `stormmin-vX.Y.Z-<target>.tar.gz`（Windows は `.zip`）形式のアーカイブを取得してください。なお `npx` で実行する場合はパッケージ名を明示して `npx @stormcat-works/stormmin ...` としてください。
+  </Accordion>
+
+  <Accordion title="出力コードはそのまま使えますか">
+    StormMin は Web 版・CLI・ライブラリのすべてが β 版 (バージョン 1.0 未満) です。Web 版の画面には常に「β版につき、出力コードにコンパイラ起因のバグが含まれる可能性があります。ゲーム内で必ず動作確認してください。」という警告が表示されます。CLI やライブラリで minify した場合も同じです。minify 後のコードは、ビークルに反映する前に必ずゲーム内で動作確認してください。
+  </Accordion>
+</AccordionGroup>

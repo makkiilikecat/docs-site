@@ -18,29 +18,29 @@
           {
             "group": "はじめに",
             "pages": [
-              "tools/stormworks/physics-codegen/index",
-              "tools/stormworks/physics-codegen/quickstart"
+              "physics-codegen/index",
+              "physics-codegen/quickstart"
             ]
           },
           {
             "group": "ガイド",
             "pages": [
-              "tools/stormworks/physics-codegen/guides/frames"
+              "physics-codegen/guides/frames"
             ]
           },
           {
             "group": "リファレンス",
             "pages": [
-              "tools/stormworks/physics-codegen/reference/settings",
-              "tools/stormworks/physics-codegen/reference/outputs",
-              "tools/stormworks/physics-codegen/reference/data",
-              "tools/stormworks/physics-codegen/reference/api"
+              "physics-codegen/reference/settings",
+              "physics-codegen/reference/outputs",
+              "physics-codegen/reference/data",
+              "physics-codegen/reference/api"
             ]
           },
           {
             "group": "FAQ",
             "pages": [
-              "tools/stormworks/physics-codegen/faq"
+              "physics-codegen/faq"
             ]
           }
         ]
@@ -53,33 +53,33 @@
           {
             "group": "はじめに",
             "pages": [
-              "tools/stormworks/codec-compiler/index",
-              "tools/stormworks/codec-compiler/quickstart"
+              "codec-compiler/index",
+              "codec-compiler/quickstart"
             ]
           },
           {
             "group": "ガイド",
             "pages": [
-              "tools/stormworks/codec-compiler/guides/fields",
-              "tools/stormworks/codec-compiler/guides/save-management",
-              "tools/stormworks/codec-compiler/guides/import-export",
-              "tools/stormworks/codec-compiler/guides/lua-integration",
-              "tools/stormworks/codec-compiler/guides/ai-export"
+              "codec-compiler/guides/fields",
+              "codec-compiler/guides/save-management",
+              "codec-compiler/guides/import-export",
+              "codec-compiler/guides/lua-integration",
+              "codec-compiler/guides/ai-export"
             ]
           },
           {
             "group": "リファレンス",
             "pages": [
-              "tools/stormworks/codec-compiler/reference/field-settings",
-              "tools/stormworks/codec-compiler/reference/packing-modes",
-              "tools/stormworks/codec-compiler/reference/json-schema",
-              "tools/stormworks/codec-compiler/reference/limits"
+              "codec-compiler/reference/field-settings",
+              "codec-compiler/reference/packing-modes",
+              "codec-compiler/reference/json-schema",
+              "codec-compiler/reference/limits"
             ]
           },
           {
             "group": "FAQ・トラブルシューティング",
             "pages": [
-              "tools/stormworks/codec-compiler/faq"
+              "codec-compiler/faq"
             ]
           }
         ]
@@ -92,32 +92,32 @@
           {
             "group": "はじめに",
             "pages": [
-              "tools/stormworks/stormmin/index",
-              "tools/stormworks/stormmin/getting-started"
+              "stormmin/index",
+              "stormmin/getting-started"
             ]
           },
           {
             "group": "ガイド",
             "pages": [
-              "tools/stormworks/stormmin/guides/cli-usage",
-              "tools/stormworks/stormmin/guides/library-usage",
-              "tools/stormworks/stormmin/guides/modules",
-              "tools/stormworks/stormmin/guides/target-size"
+              "stormmin/guides/cli-usage",
+              "stormmin/guides/library-usage",
+              "stormmin/guides/modules",
+              "stormmin/guides/target-size"
             ]
           },
           {
             "group": "リファレンス",
             "pages": [
-              "tools/stormworks/stormmin/reference/cli",
-              "tools/stormworks/stormmin/reference/api",
-              "tools/stormworks/stormmin/reference/lua-support",
-              "tools/stormworks/stormmin/reference/diagnostics"
+              "stormmin/reference/cli",
+              "stormmin/reference/api",
+              "stormmin/reference/lua-support",
+              "stormmin/reference/diagnostics"
             ]
           },
           {
             "group": "FAQ・トラブルシューティング",
             "pages": [
-              "tools/stormworks/stormmin/faq"
+              "stormmin/faq"
             ]
           }
         ]
@@ -133,7 +133,7 @@
               {
                 "group": "はじめに",
                 "pages": [
-                  "tools/stormworks/storm-editor/studio/index"
+                  "storm-editor/studio/index"
                 ]
               }
             ]
@@ -144,7 +144,7 @@
               {
                 "group": "はじめに",
                 "pages": [
-                  "tools/stormworks/storm-editor/draft/index"
+                  "storm-editor/draft/index"
                 ]
               }
             ]
@@ -159,7 +159,7 @@
           {
             "group": "はじめに",
             "pages": [
-              "tools/stormworks/storm-code/index"
+              "storm-code/index"
             ]
           }
         ]
@@ -228,5 +228,47 @@
     "socials": {
       "github": "https://github.com/Stormcat-Works"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/tools/stormworks/physics-codegen/:slug*",
+      "destination": "/physics-codegen/:slug*"
+    },
+    {
+      "source": "/tools/stormworks/physics-codegen",
+      "destination": "/physics-codegen"
+    },
+    {
+      "source": "/tools/stormworks/codec-compiler/:slug*",
+      "destination": "/codec-compiler/:slug*"
+    },
+    {
+      "source": "/tools/stormworks/codec-compiler",
+      "destination": "/codec-compiler"
+    },
+    {
+      "source": "/tools/stormworks/stormmin/:slug*",
+      "destination": "/stormmin/:slug*"
+    },
+    {
+      "source": "/tools/stormworks/stormmin",
+      "destination": "/stormmin"
+    },
+    {
+      "source": "/tools/stormworks/storm-editor/:slug*",
+      "destination": "/storm-editor/:slug*"
+    },
+    {
+      "source": "/tools/stormworks/storm-editor",
+      "destination": "/storm-editor"
+    },
+    {
+      "source": "/tools/stormworks/storm-code/:slug*",
+      "destination": "/storm-code/:slug*"
+    },
+    {
+      "source": "/tools/stormworks/storm-code",
+      "destination": "/storm-code"
+    }
+  ]
 }

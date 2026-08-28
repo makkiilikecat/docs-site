@@ -1,0 +1,26 @@
+---
+title: "FAQ・トラブルシューティング"
+sidebarTitle: "FAQ"
+description: "よくある質問とトラブルシューティング"
+---
+
+<AccordionGroup>
+  <Accordion title="設定が保存されていないように見えます">
+    パケット設定とセーブツリーは、それぞれ別のキーでブラウザの localStorage に自動保存されます。プライベートブラウジングなど localStorage が使えない環境では、保存操作自体が失敗しても画面には何も表示されません。通常のウィンドウで開き直しても改善しない場合は、ブラウザの設定でこのサイトのサイトデータ (localStorage) がブロックされていないか確認してください。
+  </Accordion>
+  <Accordion title="JSON のインポートに失敗します">
+    インポートできる JSON は、`fields` を配列として持つ 1 パケット分の設定です。それ以外の形式 (別のツールのエクスポート結果や、セーブツリー全体のデータなど) を読み込もうとすると「未対応のJSON形式です」というエラーになります。[プロジェクト JSON スキーマ](/codec-compiler/reference/json-schema) に沿った形式になっているか確認してください。
+  </Accordion>
+  <Accordion title="受信側の rx テーブルが更新されません">
+    生成された `receive_<パケット名>()` 関数は自動的には呼び出されません。受信側 MC の自分の `onTick()` から明示的に呼び出す必要があります。詳細は [生成コードの組み込み](/codec-compiler/guides/lua-integration) を参照してください。
+  </Accordion>
+  <Accordion title="受信した値が -math.huge や math.huge になります">
+    そのフィールドの範囲外処理が「範囲外検知 (Overflow)」に設定されている場合の仕様です。送信側での入力値が Min/Max の範囲外だったことを示しており、バグではありません。値を使う側のロジックでこのケースを考慮してください。
+  </Accordion>
+  <Accordion title="受信結果が送信した値と噛み合いません">
+    Sender.lua と Receiver.lua は、必ず同じ候補 (同じ使用チャンネル数) から生成された組を使ってください。候補を切り替えたりフィールドを変更したりすると、エンコードの並び順や基数が変わるため、片方だけ貼り替えると噛み合わなくなります。また `送信CH`/`受信CH` はリストの並び順で 1 対 1 に対応します。詳細は [パッキング方式](/codec-compiler/reference/packing-modes) を参照してください。
+  </Accordion>
+  <Accordion title="最初からやり直したいです">
+    画面上部の「全て初期化」で、パケット設定・フィールド・セーブツリーのすべてを初期化できます。取り消せない操作なので、必要な設定は先に JSON エクスポートしておくことをおすすめします。
+  </Accordion>
+</AccordionGroup>

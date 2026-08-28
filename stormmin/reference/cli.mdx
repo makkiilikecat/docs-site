@@ -1,0 +1,95 @@
+---
+title: "CLI リファレンス"
+sidebarTitle: "CLI"
+description: "stormmin コマンドの全サブコマンド・オプション一覧"
+---
+
+`stormmin` は `compile`（省略時の既定）と `lint` の 2 つのサブコマンドを持ちます。サブコマンドを表す文字列（`"compile"` または `"lint"`）以外の第一引数は、すべて `compile` として扱われます。
+
+## compile
+
+単一ファイル、または `require` でリンクした複数モジュールを minify します。
+
+```sh
+stormmin [compile] [FILE] [OPTIONS]
+```
+
+| オプション | 説明 |
+| --- | --- |
+| `FILE`（positional） | 入力ファイルパス。省略または `-` の場合は標準入力から読み込みます。単一ファイルモード専用で、`--entry`/`--modules-dir`/`--project` と同時には指定できません。 |
+| `-o`, `--output FILE` | 出力先ファイル。省略時は標準出力に書き込みます。 |
+| `--options JSON` | コンパイルオプションを JSON で直接指定します。`--options-file` とは同時に指定できません。 |
+| `--options-file FILE` | コンパイルオプションを記述した JSON ファイルを指定します。 |
+| `--json` | 出力コードの文字列ではなく、結果オブジェクト全体（`CompileResult`/`ProjectCompileResult`）を JSON で出力します。 |
+| `--entry NAME` | プロジェクトモードのエントリーモジュールキー。`--modules-dir` または `--project` のどちらかと併用が必須です。 |
+| `--modules-dir DIR` | プロジェクトモード。指定ディレクトリを再帰走査し、`*.lua` ファイルからモジュール一覧を組み立てます。`--entry` との併用が必須です。 |
+| `--project FILE` | プロジェクトモード。`LuaProject` 形式の JSON ファイルを直接読み込みます。`--entry`/`--modules-dir` とは同時に指定できません。 |
+| `--no-minify` | プロジェクトモードのみ。minify を行わず、リンクした読みやすいコードのみを出力します。 |
+| `--map FILE` | プロジェクトモードのみ。Source Map v3 を出力先ファイルに書き込みます。`--no-minify` と同時指定が必須です。 |
+| `-h`, `--help` | 使い方を表示して終了します。 |
+| `-V`, `--version` | `stormmin <バージョン>` の形式でバージョンを表示して終了します。 |
+
+コンパイルオプション（`--options`/`--options-file` の JSON の中身）の全項目は [ライブラリ API リファレンス](/stormmin/reference/api) を参照してください。
+
+### 引数の組み合わせルール
+
+- `--options` と `--options-file` は同時に指定できません。
+- `FILE`（positional）と `--entry`/`--modules-dir`/`--project` は同時に指定できません。
+- `--project` と `--entry`/`--modules-dir` は同時に指定できません。
+- `--modules-dir` は `--entry` なしでは指定できません。
+- `--entry` は `--modules-dir` または `--project` のどちらかと併用する必要があります。
+- `--map` は `--no-minify` なしでは指定できません。
+
+## lint
+
+静的解析のみを行います。minify は行いません。プロジェクトモードが必須で、単一ファイルの `lint` はサポートされていません。
+
+```sh
+stormmin lint --entry NAME --modules-dir DIR [OPTIONS]
+```
+
+| オプション | 説明 |
+| --- | --- |
+| `--entry NAME` | エントリーモジュールキー。 |
+| `--modules-dir DIR` | モジュールを走査するディレクトリ。 |
+| `--project FILE` | `LuaProject` 形式の JSON ファイルを直接読み込みます。 |
+| `--options JSON` / `--options-file FILE` | 解析オプション（`disabledRules`: 抑制する診断コードの配列。`severity: error` の診断は抑制できません）。 |
+| `--format text\|json` | 出力形式。既定は `text`。それ以外の値を渡すとエラーになります。 |
+| `-o`, `--output FILE` | 出力先ファイル。省略時は標準出力に書き込みます。 |
+| `-h`, `--help` / `-V`, `--version` | `compile` と同じです。 |
+
+`--json` フラグは `lint` では読み取られません（無視されます）。JSON 形式の出力が必要な場合は `--format json` を使ってください。
+
+## serve
+
+npm パッケージの `stormmin` コマンドだけが持つサブコマンドです（native バイナリ単体では利用できません）。同梱のデモ UI を静的配信します。
+
+```sh
+stormmin serve [--port N]
+```
+
+| オプション | 説明 |
+| --- | --- |
+| `-p`, `--port N` | 待ち受けポート。既定は `8787`（環境変数 `PORT` でも指定可。`--port` が優先されます）。 |
+| `-h`, `--help` | `stormmin serve [--port N]` を表示して終了します。 |
+
+待ち受けホストは環境変数 `HOST` で指定でき、既定は `127.0.0.1` です。起動後は `StormMin Web: http://<host>:<port>` を出力してプロセスが常駐します。
+
+## 入出力
+
+- 入力: 単一ファイルモードのみ、positional 引数のファイルパス、または `-`/省略時は標準入力から読み込みます。プロジェクトモードでは標準入力は使用されません。
+- 出力: `-o`/`--output` を指定するとファイルへ、指定しなければ標準出力へ書き込まれます。
+- 実行時エラー（引数解析エラー・ファイル I/O エラーなど）は `stormmin: <エラー内容>` の形式で標準エラー出力に書き込まれます。
+
+## 終了コード
+
+| コード | 意味 |
+| --- | --- |
+| `0` | 成功（`--help`/`--version` の表示を含む） |
+| `1` | compile/lint は実行できたが、結果が失敗（`ok: false` や error 診断あり） |
+| `2` | 引数解析エラーやファイル I/O エラーなど、コマンド自体が実行できなかった場合 |
+
+## --options / --options-file の JSON の扱い
+
+- JSON として不正な文字列を渡すとエラーになります。
+- JSON としては妥当でも、`stormmin` が認識しないキー（存在しないオプション名や不明な pass ID）は無視され、エラーにはなりません。オプションが実際に反映されたかどうかは `--json`/`--format json` の出力で確認してください。
