@@ -69,7 +69,7 @@ Storm Code の実行エンジンは、実際の Lua 5.3 の C 実装を WebAssem
 - `table` (`insert` / `remove` / `sort` / `concat` / `unpack` / `move` / `pack`)
 - `math` — 独自に再構築されたサブセットです。`abs` / `ceil` / `floor` / `max` / `min` / `sin` / `cos` / `tan` / `asin` / `acos` / `atan` / `sqrt` / `log` / `exp` / `deg` / `rad` / `fmod` / `modf` / `pi` / `huge` / `random` / `randomseed` は使えますが、`math.tointeger` / `math.type` / `math.ult` / `math.maxinteger` / `math.mininteger` はありません。`random`/`randomseed` は独自の疑似乱数アルゴリズムを使うため、実機の Lua とは異なる乱数列になります。
 - `input` / `output` / `property` / `screen` / `map` (Stormworks のマイクロコントローラー API)
-- `sim` / `simulator` / `require` (Storm Code 独自の API。詳細は [require とライブラリ](/tools/stormworks/storm-code/require-and-libraries) を参照してください)
+- `sim` / `simulator` / `require` (Storm Code 独自の API。詳細は [require とライブラリ](/storm-code/require-and-libraries) を参照してください)
 - `print`、および `debug.log(message)` のみを持つ簡易版 `debug` テーブル
 
 ### 使えないグローバル
@@ -111,4 +111,4 @@ Storm Code の実行エンジンは、実際の Lua 5.3 の C 実装を WebAssem
 
 ## 制限値
 
-実行時間・描画コマンド数・ログ出力量などの上限は [リファレンス > 制限値一覧](/tools/stormworks/storm-code/reference/limits) にまとめています。
+実行時間・描画コマンド数・ログ出力量などの上限は [リファレンス > 制限値一覧](/storm-code/reference/limits) にまとめています。

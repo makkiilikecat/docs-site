@@ -31,7 +31,7 @@ Storm Code のコードエディタは Monaco Editor (VS Code と同じエディ
 - `async` (`async.httpGet` / `debug.log`)
 - Lua 標準ライブラリのサブセット (`math` / `table` / `string` および基本関数)
 
-補完候補にカーソルを合わせる (ホバーする) と、関数のシグネチャと説明が表示されます。これらの API の詳細は [require とライブラリ](/tools/stormworks/storm-code/require-and-libraries) と [Runtime](/tools/stormworks/storm-code/runtime) を参照してください。
+補完候補にカーソルを合わせる (ホバーする) と、関数のシグネチャと説明が表示されます。これらの API の詳細は [require とライブラリ](/storm-code/require-and-libraries) と [Runtime](/storm-code/runtime) を参照してください。
 
 <Note>
 補完はあらかじめ用意された API 一覧から候補を出す仕組みで、プロジェクト内で自分が定義した関数・変数や、`require` したモジュールの中身を補完することはできません。
@@ -47,7 +47,7 @@ Storm Code のコードエディタは Monaco Editor (VS Code と同じエディ
 - モジュールが見つからない、モジュールキーが不正、循環 `require`、構文エラーなど
 
 **`require` の使い方 (エラー)**
-- トップレベル以外での `require`、式の一部としての `require`、動的な引数を渡す `require` は使えません。詳細は [require とライブラリ](/tools/stormworks/storm-code/require-and-libraries) を参照してください。
+- トップレベル以外での `require`、式の一部としての `require`、動的な引数を渡す `require` は使えません。詳細は [require とライブラリ](/storm-code/require-and-libraries) を参照してください。
 
 **`sim` (ambient) の使い方 (エラー)**
 - 未知のメンバーへのアクセス、`sim` 自体を値として扱う、デバッグ専用メンバーのエクスポート時使用など

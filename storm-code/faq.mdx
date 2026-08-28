@@ -8,7 +8,7 @@ description: "よくある質問と困ったときの対処"
 
 <AccordionGroup>
   <Accordion title="Ctrl+S を押しても何も起きません">
-    Storm Code に明示的な「保存」操作はありません。編集内容は自動的にブラウザの IndexedDB に反映され続けているため、`Ctrl+S` は何もしません。押さなくてもデータは失われません。詳細は [保存・エクスポート・インポート](/tools/stormworks/storm-code/project-data) を参照してください。
+    Storm Code に明示的な「保存」操作はありません。編集内容は自動的にブラウザの IndexedDB に反映され続けているため、`Ctrl+S` は何もしません。押さなくてもデータは失われません。詳細は [保存・エクスポート・インポート](/storm-code/project-data) を参照してください。
   </Accordion>
   <Accordion title="複数のプロジェクトを切り替えて使えますか">
     Storm Code のワークスペースはブラウザごとに 1 つだけです。別のプロジェクトを扱いたい場合は、`Export Zip...` で現在の内容を保存してから、`Open Folder...` や `Import Zip...` で別の内容に切り替えてください。
@@ -20,13 +20,13 @@ description: "よくある質問と困ったときの対処"
     編集できるのは 1 つのタブだけです。既に編集中のタブがある状態で別のタブを開くと、そちらは読み取り専用になります。
   </Accordion>
   <Accordion title="minify したコードがゲームに貼り付けられません">
-    minify 後のコードが Stormworks のスクリプト上限 (8192 文字) を超えている可能性があります。minify ボタンやエラーパネルに超過の警告が表示されていないか確認してください。対処法は [Minify とゲームへの貼り付け](/tools/stormworks/storm-code/minify) を参照してください。
+    minify 後のコードが Stormworks のスクリプト上限 (8192 文字) を超えている可能性があります。minify ボタンやエラーパネルに超過の警告が表示されていないか確認してください。対処法は [Minify とゲームへの貼り付け](/storm-code/minify) を参照してください。
   </Accordion>
   <Accordion title="require したモジュールの中身が補完されません">
     エディタの補完は、あらかじめ用意された組み込み API 一覧 (Lua 標準ライブラリのサブセットや `sim.*` など) を対象にしたもので、プロジェクト内で自分が定義した関数・変数や `require` したモジュールの中身は補完対象になりません。
   </Accordion>
   <Accordion title="共同編集の共有 URL を無効にしたいです">
-    個々の共有 URL だけを無効化する機能はありません。セッションを終了すると、それまで発行していた URL も無効になります。詳細は [共同編集](/tools/stormworks/storm-code/collaboration) を参照してください。
+    個々の共有 URL だけを無効化する機能はありません。セッションを終了すると、それまで発行していた URL も無効になります。詳細は [共同編集](/storm-code/collaboration) を参照してください。
   </Accordion>
   <Accordion title="デバッグ実行中、for ループの変数が最初は表示されません">
     `for i=1,N do ... end` のようなループ変数は、実装上の制約でループ本体に最初に到達した時点ではまだ表示されず、2 回目以降のヒットから表示されます。`while`/`repeat` の条件式でのみ参照される変数も、名前を持たない一時変数として表示されることがあります。
@@ -45,7 +45,7 @@ description: "よくある質問と困ったときの対処"
 
 ### lint やコンパイルで `require` 関連のエラーが出る
 
-`require` は次のいずれかの理由でエラーになっている可能性があります。[require とライブラリ](/tools/stormworks/storm-code/require-and-libraries) の制限事項を確認してください。
+`require` は次のいずれかの理由でエラーになっている可能性があります。[require とライブラリ](/storm-code/require-and-libraries) の制限事項を確認してください。
 
 - トップレベル以外 (関数の中や `if`/`for` の中) で `require` している
 - `require(...)` を式の一部として使っている
