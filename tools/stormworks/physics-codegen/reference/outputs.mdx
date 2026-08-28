@@ -39,7 +39,7 @@ description: "各オフセットカードで選択できる出力項目と、生
 
 ## World Pos と位置自動補完
 
-`World Pos` を1つ以上選択すると、Physics Sensor の Composite Input ch1〜3（世界座標系の位置）を読み取ります。[設定リファレンス](/tools/stormworks/physics-codegen/reference/settings)の「1-3=0位置自動補完」を有効にしていると、ch1〜3 がすべて0の tick では位置をそのまま信用せず、直近の速度を積分して補完します。
+`World Pos` を1つ以上選択すると、Physics Sensor の Composite Input ch1〜3（世界座標系の位置）を読み取ります。[設定リファレンス](/tools/stormworks/physics-codegen/reference/settings)の「1-3=0位置自動補完」を有効にしていると、ch1〜3 がすべて0の tick（Physics Sensor に電力が供給されていない場合など）では位置をそのまま信用せず、直近の速度を積分して補完します。
 
 ## Tilt / Compass と ch15〜17直利用
 
