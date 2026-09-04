@@ -1,0 +1,8 @@
+
+# AGENTS.md への symlink (Claude Code 用)
+CLAUDE.md
+
+# git worktree の置き場 (~/develop/AGENTS.md 共通規約)
+.worktrees/
+# ローカル専用ファイル (共有しない作業用)
+local-*
