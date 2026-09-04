@@ -213,6 +213,10 @@
       {
         "label": "makkii.jp",
         "href": "https://www.makkii.jp/"
+      },
+      {
+        "label": "Blog",
+        "href": "https://blog.makkii.jp/"
       }
     ],
     "primary": {
@@ -236,7 +240,22 @@
   "footer": {
     "socials": {
       "github": "https://github.com/makkiilikecat/docs-site"
-    }
+    },
+    "links": [
+      {
+        "header": "makkii.jp",
+        "items": [
+          {
+            "label": "ツール一覧",
+            "href": "https://www.makkii.jp/"
+          },
+          {
+            "label": "Blog",
+            "href": "https://blog.makkii.jp/"
+          }
+        ]
+      }
+    ]
   },
   "redirects": [
     {
