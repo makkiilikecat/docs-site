@@ -29,13 +29,14 @@ Sim I/O パネルで設定した内容は、**編集中の Lua ファイル自�
 ```lua
 -- >>> storm-lua-runner:simio (auto-generated -- edit via Sim I/O panel; do not edit by hand)
 sim.group("Flight")
-sim.labelNumberInput(1, "Flight", "altitude", { min = 0, max = 1000 })
+sim.labelNumberInput(1, "Flight", "altitude", { mode = "slider", max = 1000 })
 sim.labelBoolInput(1, "Flight", "gear down")
 sim.setProperty("speed", 2.5)
 -- <<< storm-lua-runner:simio
 ```
 
 - **ブロックの外側にあるコードには一切触れません。**
+- 既定値と同じ設定は省略されます。上の例で `min` が無いのは、既定値の `0` のままだからです。
 - 中身は宣言的な `sim.*` の呼び出しだけです。手で書き換えず、パネルから操作してください。
 - このブロックは minify の前に取り除かれます。`sim.*` はシミュレータ専用で、
   ゲーム内には存在しないためです。詳細は [`sim.*` 標準ライブラリ](/storm-code/reference/sim-library)を参照してください。
