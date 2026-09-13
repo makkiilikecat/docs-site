@@ -1,0 +1,88 @@
+---
+title: "クイックスタート"
+sidebarTitle: "クイックスタート"
+description: "Storm Code を開いてから、minify したコードを Stormworks に貼るまで"
+---
+
+初めて Storm Code を開いてから、ゲームへ貼り付けるまでを一度通します。
+所要時間は5分程度です。
+
+<Steps>
+  <Step title="開く">
+    [Storm Code](https://www.makkii.jp/tools/stormworks/storm-code/) を開きます。
+    アカウントは不要です。
+
+    持ち物が1つも無い場合は、`My Project` という名前のワークスペースが自動で作られ、
+    そのままエディタが開きます。名前は後からいつでも変更できます。
+
+    2回目以降は[ワークスペース選択画面](/storm-code/guides/workspaces)が開きます。
+  </Step>
+
+  <Step title="書く">
+    エディタに Lua を書きます。保存操作はありません。入力した内容は常にブラウザ内へ反映されます。
+
+    ```lua
+    function onTick()
+        n = input.getNumber(1)
+    end
+
+    function onDraw()
+        screen.setColor(0, 255, 0)
+        screen.drawText(1, 1, "value: " .. tostring(n))
+    end
+    ```
+
+    <Note>
+      `Ctrl+S` は保存ではなく、そのときの内容を[履歴に1世代刻む](/storm-code/guides/history)操作です。
+    </Note>
+  </Step>
+
+  <Step title="実行する">
+    上部の Run ボタン、または `F5` で実行します。
+    実行前に自動で解析が走り、`require` の誤りなどがあれば VM を起動せずに止まります。
+
+    止めるときは Stop、一時停止は `F6` です。
+  </Step>
+
+  <Step title="モニターと入出力を見る">
+    `onDraw` の描画結果はモニターパネルに表示されます。
+
+    `input.getNumber(1)` のような入力値は **Sim I/O** パネルから与えます。
+    スライダーで手で動かすほか、往復・サイン波・ランダム・一定速度の自動操作もできます。
+
+    詳細は[モニターと Sim I/O](/storm-code/guides/monitor-and-simio)を参照してください。
+  </Step>
+
+  <Step title="詰まったら Problems を見る">
+    編集中は自動でリントが走り、`Problems` パネルに診断が並びます。
+    各行の右端の「AI に聞く」から[エラーの解説](/storm-code/guides/ai-assist)を求められます。
+
+    <Note>
+      ワークスペースを開いた直後は Problems パネルが空です。解析に必要なモジュールを
+      読み込み終えてから最初のリントが走るため、少し遅れて埋まります。
+    </Note>
+  </Step>
+
+  <Step title="minify してゲームへ貼る">
+    `Minify` を開くと、`require` を解決して1本に結合し、minify した結果が出ます。
+    コピーして Stormworks のマイクロコントローラーの Lua スクリプトへ貼り付けます。
+
+    ブラウザで動いたものはエクスポートしても動きます。デバッグ実行の前に必ず同じ解析を通すため、
+    「実行はできたが minify で壊れる」という状態にはなりません。
+    詳細は [require とミニファイ](/storm-code/guides/modules-and-minify)を参照してください。
+  </Step>
+
+  <Step title="バックアップを取る">
+    ローカルワークスペースはブラウザのサイトデータです。ブラウザのデータを消すと一緒に消えます。
+
+    `File > Export Zip...` で現在のワークスペースを zip に保存してください。
+    詳細は [zip でバックアップ・移行する](/storm-code/guides/backup)を参照してください。
+  </Step>
+</Steps>
+
+## 次に読むもの
+
+- コードを複数ファイルに分けたい → [require とミニファイ](/storm-code/guides/modules-and-minify)
+- Lua を書かずにモニターを作りたい → [Design](/storm-code/guides/design)
+- 複数の端末で続きをやりたい → [クラウドワークスペース](/storm-code/guides/cloud)
+- 誰かと一緒に編集したい → [一時共有と共同編集](/storm-code/guides/sharing)

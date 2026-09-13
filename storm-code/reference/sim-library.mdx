@@ -1,0 +1,113 @@
+---
+title: "sim.* 標準ライブラリ"
+sidebarTitle: "sim.* 一覧"
+description: "require なしで使える名前空間。ライブラリ関数とシミュレータ専用 API の全一覧"
+---
+
+`sim.*` は `require` なしで使える名前空間です。メンバーは2種類あります。
+
+| 種類 | エクスポート時 |
+| --- | --- |
+| **ライブラリ関数** | 使った関数だけが結果に埋め込まれます |
+| **シミュレータ専用** | 参照すると `environment-only-api` エラーになります |
+
+<Note>
+  `sim` という名前のフォルダは作れません。この名前空間と衝突するためです。
+  ファイルとしての `sim.lua` は置けますが、`require` の対象外です。
+</Note>
+
+## ライブラリ関数
+
+Storm Code に同梱されており、バージョンは固定です。利用者が選ぶことはできません。
+これは Stormworks の公式ライブラリではありません。
+
+### `sim.clamp(value, lo, hi)`
+
+`value` を `[lo, hi]` の範囲に収めます。
+
+```lua
+local altitude = sim.clamp(input.getNumber(1), 0, 1000)
+```
+
+| 引数 | 型 | 内容 |
+| --- | --- | --- |
+| `value` | number | 収めたい値 |
+| `lo` | number | 下限 |
+| `hi` | number | 上限 |
+
+`lo > hi` の場合の挙動は未定義です。引数の検証は行いません
+(マイクロコントローラー上での実行コストを抑えるためです)。
+
+### `sim.lerp(a, b, t)`
+
+`a` から `b` への線形補間です。`t = 0` で `a`、`t = 1` で `b` を返します。
+
+```lua
+local smoothed = sim.lerp(prev, target, 0.1)
+```
+
+| 引数 | 型 | 内容 |
+| --- | --- | --- |
+| `a` | number | 開始値 |
+| `b` | number | 終了値 |
+| `t` | number | 補間係数 |
+
+**`t` が `[0, 1]` の外でもクランプしません。**外挿されます。
+範囲を保証したい場合は `sim.clamp` と組み合わせてください。
+
+### `sim.map(value, inMin, inMax, outMin, outMax)`
+
+`value` を入力範囲から出力範囲へ線形に変換します。
+
+```lua
+local percent = sim.map(input.getNumber(1), 0, 1000, 0, 100)
+```
+
+| 引数 | 型 | 内容 |
+| --- | --- | --- |
+| `value` | number | 変換したい値 |
+| `inMin` / `inMax` | number | 入力範囲 |
+| `outMin` / `outMax` | number | 出力範囲 |
+
+**出力範囲へクランプしません。**入力が範囲外なら外挿されます。
+`inMin == inMax` の場合はゼロ除算になります。検査は行いません。
+
+## シミュレータ専用 API
+
+Storm Code の中にしか存在しません。ゲーム内には無いため、
+**エクスポートするコードから参照すると `environment-only-api` エラーになります。**
+
+デバッグ実行では実在するので、実行自体は妨げられません。
+
+| メンバー | 用途 |
+| --- | --- |
+| `sim.group` | Sim I/O のチャンネルをグループにまとめる |
+| `sim.setProperty` | プロパティの値を設定する |
+| `sim.labelNumberInput` | number の入力チャンネルを定義する |
+| `sim.labelNumberOutput` | number の出力チャンネルを定義する |
+| `sim.labelBoolInput` | bool の入力チャンネルを定義する |
+| `sim.labelBoolOutput` | bool の出力チャンネルを定義する |
+| `sim.setNumberInput` | number の入力値を設定する |
+| `sim.setBoolInput` | bool の入力値を設定する |
+| `sim.onTick` | ティックごとの処理を登録する |
+| `sim.getTouch` | タッチの状態を取得する |
+| `sim.getSlider` | スライダーの値を取得する |
+| `sim.getIsToggled` | トグルの状態を取得する |
+| `sim.getIsClicked` | クリックの状態を取得する |
+
+<Note>
+  これらは通常、**手で書くものではありません。**
+  [Sim I/O パネル](/storm-code/guides/monitor-and-simio)が
+  マーカーで区切ったブロックとして自動生成します。
+  このブロックは minify の前に取り除かれるため、パネルから設定している限りエラーにはなりません。
+</Note>
+
+## 使えない書き方
+
+| 書き方 | 診断コード |
+| --- | --- |
+| `local s = sim` (名前空間そのものを値として使う) | `ambient-root-escapes` |
+| `sim[name]` (動的なアクセス) | `ambient-dynamic-access` |
+| `sim.clamp = f` (代入) | `ambient-assigned` |
+| `sim.doesNotExist` (存在しないメンバー) | `unknown-ambient-member` |
+| `sim` の中での `require` | `require-in-ambient` |

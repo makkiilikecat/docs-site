@@ -159,7 +159,43 @@
           {
             "group": "はじめに",
             "pages": [
-              "storm-code/index"
+              "storm-code/index",
+              "storm-code/quickstart"
+            ]
+          },
+          {
+            "group": "ガイド",
+            "pages": [
+              "storm-code/guides/workspaces",
+              "storm-code/guides/editor",
+              "storm-code/guides/run-and-debug",
+              "storm-code/guides/monitor-and-simio",
+              "storm-code/guides/modules-and-minify",
+              "storm-code/guides/design",
+              "storm-code/guides/history",
+              "storm-code/guides/backup",
+              "storm-code/guides/legacy-rescue",
+              "storm-code/guides/cloud",
+              "storm-code/guides/sharing",
+              "storm-code/guides/remote-mcp",
+              "storm-code/guides/ai-assist"
+            ]
+          },
+          {
+            "group": "リファレンス",
+            "pages": [
+              "storm-code/reference/shortcuts",
+              "storm-code/reference/naming",
+              "storm-code/reference/sim-library",
+              "storm-code/reference/diagnostics",
+              "storm-code/reference/limits",
+              "storm-code/reference/zip-format"
+            ]
+          },
+          {
+            "group": "FAQ・トラブルシューティング",
+            "pages": [
+              "storm-code/faq"
             ]
           }
         ]

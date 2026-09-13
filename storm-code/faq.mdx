@@ -1,0 +1,231 @@
+---
+title: "FAQ・トラブルシューティング"
+sidebarTitle: "FAQ"
+description: "よくある質問と、詰まりやすい箇所"
+---
+
+## 基本
+
+<AccordionGroup>
+  <Accordion title="保存はどこですか？">
+    ありません。入力した内容は常にブラウザ内へ反映されています。
+
+    `Ctrl+S` は保存ではなく、[そのときの内容を履歴に1世代刻む](/storm-code/guides/history)操作です。
+  </Accordion>
+
+  <Accordion title="アカウントは必要ですか？">
+    ローカルワークスペースだけを使うなら不要です。
+
+    Google ログインが必要なのは[クラウドワークスペース](/storm-code/guides/cloud)、
+    [メンバーとの共同編集](/storm-code/guides/sharing)、
+    [Remote MCP](/storm-code/guides/remote-mcp) です。
+    [一時共有](/storm-code/guides/sharing)のゲストはログイン不要です。
+  </Accordion>
+
+  <Accordion title="オフラインで使えますか？">
+    使えません。ページを開くこと自体にネットワークが必要です。
+
+    ただし、開いたあとに接続が切れても本文の編集は続けられ、接続が戻ったときに同期されます。
+    [クラウドワークスペース](/storm-code/guides/cloud)のファイル作成・削除・移動だけは、
+    切断中はできません。
+  </Accordion>
+
+  <Accordion title="表示を英語にできますか？">
+    できません。現在は日本語のみです。
+  </Accordion>
+</AccordionGroup>
+
+## データが心配
+
+<AccordionGroup>
+  <Accordion title="ブラウザのデータを消したらどうなりますか？">
+    **ローカルワークスペースは消えます。**
+    ブラウザのサイトデータとして保存されているためです。
+
+    定期的に [zip でバックアップ](/storm-code/guides/backup)を取ってください。
+    端末を越えて残したい場合は[クラウドワークスペース](/storm-code/guides/cloud)を使ってください。
+  </Accordion>
+
+  <Accordion title="別の端末で続きをやりたい">
+    2つの方法があります。
+
+    - **zip で移す** — `File > Export Zip...` で保存し、別の端末で「Zip をインポート」します。
+      ファイル履歴は移りません。
+    - **クラウドワークスペースにする** — 同じ Google アカウントでログインすれば、
+      そのまま別の端末から開けます。
+
+    詳しくは [zip でバックアップ・移行する](/storm-code/guides/backup)と
+    [クラウドワークスペース](/storm-code/guides/cloud)を参照してください。
+  </Accordion>
+
+  <Accordion title="ファイル履歴が別の端末に無い">
+    仕様です。**ファイル履歴はその端末の中だけにあります。**
+    zip にも入らず、ワークスペースを複製しても消えます。
+
+    端末を越えて残したい場合は[クラウド世代](/storm-code/guides/history)を使ってください。
+    クラウド世代はワークスペース全体の復元点で、サーバー側に保存されます。
+  </Accordion>
+
+  <Accordion title="消してしまったファイルを戻したい">
+    [クラウド世代](/storm-code/guides/history)からなら復元できます。
+    ファイル履歴からは戻せません (ファイルの中身しか持っていないためです)。
+
+    復元されたファイルは**新しいファイル**として作られるので、削除前の履歴は引き継がれません。
+  </Accordion>
+</AccordionGroup>
+
+## 旧バージョンから
+
+<AccordionGroup>
+  <Accordion title="開いたら見慣れない画面が出て先に進めません">
+    [旧公開版のデータの救出画面](/storm-code/guides/legacy-rescue)です。
+
+    新しいバージョンは旧バージョンの保存データを読めません。
+    消えてしまう前にバックアップを取ってもらうため、通常の起動より先に表示しています。
+
+    バックアップを保存して「新版を開く」を押すか、旧データを削除すると先へ進めます。
+
+    <Warning>
+      バックアップの保存を確認するまで、旧データの削除や「全データを初期化」を行わないでください。
+    </Warning>
+  </Accordion>
+
+  <Accordion title="毎回その画面が出ます">
+    旧データが残っている限り、リロードのたびに表示されます。
+    「読んだ」という記録を持たないためです。あとで忘れられてデータが失われるのを防いでいます。
+
+    バックアップを保存し、内容を確認したうえで「旧データを削除」まで行えば表示されなくなります。
+  </Accordion>
+
+  <Accordion title="救出バックアップをインポートしたら拒否されました">
+    **外側の zip はインポートできません。** 取り込めるのは中の `code.zip` だけです。
+
+    zip を PC などで解凍し、中の `code.zip` を「Zip をインポート」から開いてください。
+  </Accordion>
+
+  <Accordion title="旧バージョンの Design は使えますか？">
+    使えません。**自動変換もしません。**
+
+    救出バックアップの `designs/` に旧形式の JSON として保存されるので、
+    必要であれば AI などを使って手動で新形式へ変換してください。
+
+    <Warning>
+      AI サービスへ渡す前に、コードや JSON に秘密にすべき情報が含まれていないか確認してください。
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+## 動かない・出ない
+
+<AccordionGroup>
+  <Accordion title="読み取り専用と表示されて編集できません">
+    **同じワークスペースを別のタブでも開いています。**
+    後から開いたタブが読み取り専用になります。
+
+    他のタブを閉じてからリロードしてください。
+    違うワークスペースを2つのタブで開く分には、両方とも編集できます。
+  </Accordion>
+
+  <Accordion title="Problems パネルが空のままです">
+    ワークスペースを開いた直後は空です。
+    解析に必要なものを読み込み終えてから最初のリントが走るので、少し遅れて埋まります。
+
+    何か編集すれば即座に走ります。
+  </Accordion>
+
+  <Accordion title="実行が勝手に止まっていました">
+    **タブが隠れて30秒経つと、Lua の実行を自動で止めます。**
+    モバイルで電池を消費し続けるのを防ぐためです。
+
+    戻ってくると自動で再開し、1回だけ通知が出ます。
+    自分で止めたものが勝手に動き出すことはありません。
+
+    同期は止まりません。止まるのはこの端末の実行だけです。
+  </Accordion>
+
+  <Accordion title="ファイルを作れません（クラウドワークスペース）">
+    接続が切れている可能性があります。
+    **切断中はファイルの作成・削除・移動ができません。**
+
+    複数の端末が同時に別々のツリー操作をすると矛盾するため、
+    サーバーが順番を決める必要があるためです。本文の編集は続けられます。
+
+    容量の上限に達している場合もあります。その場合は明示的にその旨が表示されます。
+  </Accordion>
+
+  <Accordion title="ゲームに貼ったら動きません">
+    `Problems` に warning が出ていないか確認してください。
+
+    次の3つは**デバッグ実行では動くのに、実機では動かない**ものです。
+
+    - `sw-unavailable-global` — Stormworks には存在しない Lua 標準機能
+    - `input-outside-ontick` — `input` は `onTick` の中でのみ使える
+    - `output-outside-ontick` — `output` は `onTick` の中でのみ使える
+
+    詳しくは[診断とエラーコード](/storm-code/reference/diagnostics)を参照してください。
+  </Accordion>
+</AccordionGroup>
+
+## require と minify
+
+<AccordionGroup>
+  <Accordion title="require がエラーになります">
+    トップレベルの文として、次の2つの形だけが使えます。
+
+    ```lua
+    local util = require("lib.util")
+    require("lib.setup")
+    ```
+
+    関数や `if` の中には書けません。引数は文字列リテラルのみです。
+    式の一部にもできません。
+
+    詳しくは [require とミニファイ](/storm-code/guides/modules-and-minify)を参照してください。
+  </Accordion>
+
+  <Accordion title="ファイル名にハイフンが使えません">
+    `.lua` のファイル名とフォルダ名は Lua 識別子 (`[A-Za-z_][A-Za-z0-9_]*`) に限られます。
+
+    パスと `require` のキーを常に1対1に対応させるための制約です。
+    `.lua` 以外のファイルには制約はありません。
+
+    詳しくは[パスとモジュールキー](/storm-code/reference/naming)を参照してください。
+  </Accordion>
+
+  <Accordion title="sim という名前のフォルダが作れません">
+    [`sim.*` 標準ライブラリ](/storm-code/reference/sim-library)の名前空間と衝突するためです。
+
+    ファイルとしての `sim.lua` はどの階層にも置けます (`require` の対象外です)。
+  </Accordion>
+</AccordionGroup>
+
+## AI について
+
+<AccordionGroup>
+  <Accordion title="AI チャットはありますか？">
+    ありません。AI が関わるのは
+    [エラーの解説とファイル履歴の自動命名](/storm-code/guides/ai-assist)の2つだけです。
+
+    [Remote MCP](/storm-code/guides/remote-mcp) は推論を行わず、
+    利用中の外部エージェントへ Storm Code の操作手段を渡す機能です。
+  </Accordion>
+
+  <Accordion title="書いたコードは AI の学習に使われますか？">
+    **この2つの機能が送るものは、既定で学習に使いません。**
+    サーバー側で学習の対象外として固定されており、設定の切り替えに依存しません。
+
+    ただし、**学習に使わないことと、記録が残らないことは別です。**
+    送信内容は、障害の調査・不正利用への対処・品質改善のための記録として保持されます。
+
+    詳しくは [プライバシーポリシー](https://www.makkii.jp/privacy.html) と
+    [利用規約](https://www.makkii.jp/terms.html) を参照してください。
+  </Accordion>
+
+  <Accordion title="AI の設定はどこですか？">
+    ありません。使うモデルやプロンプトはすべてサーバー側にあります。
+  </Accordion>
+</AccordionGroup>
+
+## 報告
+
+不具合や説明の不足は、Storm Code の `フィードバック` から報告できます。

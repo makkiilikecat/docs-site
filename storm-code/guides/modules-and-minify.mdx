@@ -1,0 +1,118 @@
+---
+title: "require とミニファイ"
+sidebarTitle: "require とミニファイ"
+description: "複数ファイルへの分割、require の書き方、sim.* 標準ライブラリ、minify してゲームへ貼る"
+---
+
+Stormworks のマイクロコントローラーには1本の Lua しか貼れませんが、
+Storm Code では複数のファイルに分けて書き、貼るときに1本へ結合できます。
+結合と minify は [StormMin](/stormmin/index) が行います。
+
+## モジュールキー
+
+`.lua` のパスは、そのままモジュールキーになります。
+
+| パス | キー |
+| --- | --- |
+| `util.lua` | `util` |
+| `lib/math.lua` | `lib.math` |
+| `lib/nav/pid.lua` | `lib.nav.pid` |
+
+対応は常に1対1です。そのために `.lua` のファイル名とフォルダ名は
+Lua 識別子 (`[A-Za-z_][A-Za-z0-9_]*`) に限られています。
+詳細は[パスとモジュールキー](/storm-code/reference/naming)を参照してください。
+
+## require の書き方
+
+**トップレベルの文として**、次の2つの形だけが使えます。
+
+```lua
+local util = require("lib.util")   -- 値を受け取る
+require("lib.setup")               -- 副作用のためだけに読み込む
+```
+
+`require "lib.util"` のように括弧を省略した形も使えます。
+
+次のものはすべてエラーになります。
+
+```lua
+local x = require("lib.util").helper   -- 式の一部にはできない
+if cond then require("lib.a") end      -- 関数や if の中には書けない
+require(name)                          -- 引数は文字列リテラルのみ
+```
+
+<Note>
+  この制限は、**呼び出し位置への静的な展開が常に可能**であることを保証するためのものです。
+  この形なら、ブラウザでの実行 (本物の `require`) と、エクスポート後 (静的にリンクされたコード) で、
+  実行の順序も回数も完全に一致します。「ブラウザでは動いたのにゲームでは違う挙動になった」が起きません。
+</Note>
+
+意味論は標準 Lua と同じです。モジュールは1度だけ評価され、結果が使い回されます。
+循環 `require` はエラーとして検出されます。
+
+## `sim.*` 標準ライブラリ
+
+`sim.*` は `require` なしで使える名前空間です。2種類のメンバーがあります。
+
+| 種類 | 例 | エクスポート時 |
+| --- | --- | --- |
+| ライブラリ関数 | `sim.clamp` `sim.lerp` `sim.map` | 使った関数だけが結果に埋め込まれる |
+| シミュレータ専用 | `sim.group` `sim.labelNumberInput` `sim.setProperty` など | 参照するとエラー |
+
+シミュレータ専用のものは Storm Code の中にしか存在せず、ゲーム内には無いためです。
+[Sim I/O](/storm-code/guides/monitor-and-simio) が生成するブロックは minify の前に取り除かれるため、
+パネルから設定している限りこのエラーにはなりません。
+
+全一覧は [`sim.*` 標準ライブラリ](/storm-code/reference/sim-library)にあります。
+
+<Note>
+  `sim.*` に付属するライブラリは Storm Code に同梱されており、バージョンは固定です。
+  利用者が選ぶことはできません。これは Stormworks の公式ライブラリではありません。
+</Note>
+
+## minify する
+
+`Minify` を開くと、次の処理を通した結果が出ます。
+
+```
+require の解決とリンク → 最適化 → minify → 1本の文字列
+```
+
+結果をコピーして、Stormworks のマイクロコントローラーの Lua スクリプトへ貼り付けます。
+エクスポートの際には履歴が1世代記録されます。
+
+### デバッグ実行では警告、minify ではエラーになるもの
+
+Stormworks の実機にしか無い制限がいくつかあります。
+これらは編集中は警告として表示され、minify のときにエラーになります。
+
+| 診断コード | 内容 |
+| --- | --- |
+| `sw-unavailable-global` | Stormworks 実機には存在しない Lua 標準機能 |
+| `input-outside-ontick` | `input` は `onTick` の中でのみ使える |
+| `output-outside-ontick` | `output` は `onTick` の中でのみ使える |
+
+デバッグ実行はブラウザ内の本物の Lua なので、これらでも動いてしまいます。
+その差を埋めるために、警告として先に見せています。
+
+## 編集中のリント
+
+編集中は自動で解析が走り、`Problems` パネルに診断が出ます。
+
+- 解析は常に全ファイルが対象です。フィルターは表示だけを絞ります。
+- フィルターは「ファイル (現在 / 開いているもの / 全部)」「種別 (error / warning / info)」
+  「発生源 (lint / 実行時)」の3軸です。既定は「開いているファイル」「全種別」「全発生源」です。
+- 絞り込みの状態はリロードしても残ります。
+
+診断コードの一覧は[診断とエラーコード](/storm-code/reference/diagnostics)にあります。
+
+### 特定の行だけ警告を止める
+
+行コメントで抑制できます。
+
+```lua
+foo = 1  --@storm ignore(undefined-global)
+```
+
+抑制できるのは警告 (warning) だけです。
+error のものは抑制できません。実機で確実に壊れるものを黙らせる穴は作っていません。

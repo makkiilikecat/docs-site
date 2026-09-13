@@ -1,0 +1,136 @@
+---
+title: "診断とエラーコード"
+sidebarTitle: "診断とエラー"
+description: "リント診断の全コードと、実行時エラーの分類一覧"
+---
+
+診断には2つの出どころがあります。
+
+| 出どころ | いつ出るか | 場所 |
+| --- | --- | --- |
+| **lint** | 編集中に自動で | `Problems` パネル、エディタの波線 |
+| **実行時** | 実行中にクラッシュしたとき | `Problems` パネル、ログパネル |
+
+`Problems` パネルは「ファイル」「種別」「発生源」の3軸で表示を絞れます。
+**解析自体は常に全ファイルが対象**で、フィルターは表示だけを変えます。
+
+## 診断メッセージの言語
+
+`File > Settings…` の「診断メッセージ」で、日本語訳と原文を切り替えられます。
+訳を切っても、ヒントは折りたたみで残ります。
+
+対応表に無いコードは原文のまま表示されます。黙って空にすることはありません。
+
+---
+
+## lint 診断
+
+### プロジェクトの構造 (error)
+
+| コード | 内容 |
+| --- | --- |
+| `entry-not-found` | エントリのモジュールが見つかりません |
+| `invalid-module-key` | モジュールキーの文法が不正です |
+| `module-not-found` | `require` で指定されたモジュールが見つかりません |
+| `require-cycle` | `require` の循環参照が検出されました |
+| `syntax-error` | 構文エラーです |
+
+### require の制限 (error)
+
+| コード | 内容 |
+| --- | --- |
+| `require-not-top-level` | `require` はトップレベルでのみ使えます (関数の中などは不可) |
+| `require-not-statement` | `require` は単独の文としてのみ使えます (式の一部にはできません) |
+| `require-dynamic` | `require` の引数は静的な文字列リテラルである必要があります |
+| `require-in-ambient` | `require` は `sim` などの名前空間の中では使えません |
+
+書き方は [require とミニファイ](/storm-code/guides/modules-and-minify)を参照してください。
+
+### `sim.*` の規則 (error)
+
+| コード | 内容 |
+| --- | --- |
+| `unknown-ambient-member` | 存在しないメンバーを参照しています (スペルミスの可能性) |
+| `environment-only-api` | シミュレータ専用 API です。エクスポート後には存在しません |
+| `ambient-root-escapes` | 名前空間そのものを値として使うことはできません |
+| `ambient-dynamic-access` | `[式]` による動的なアクセスはできません |
+| `ambient-assigned` | 読み取り専用です。代入はできません |
+
+一覧は [`sim.*` 標準ライブラリ](/storm-code/reference/sim-library)にあります。
+
+<Note>
+  `environment-only-api` はエクスポート時に確実にエラーになりますが、
+  デバッグ実行では実在する API なので実行自体は妨げられません。
+  メッセージにその旨が付きます。
+</Note>
+
+### 一般的なリント (warning)
+
+| コード | 内容 |
+| --- | --- |
+| `undefined-global` | 未定義のグローバル変数を参照しています |
+| `unused-local` | 一度も読み取られていないローカル変数です |
+| `unused-parameter` | 一度も読み取られていない仮引数です |
+| `unused-loop-variable` | 一度も読み取られていないループ変数です |
+| `shadowed-local` | 外側のスコープの変数を隠しています (同名の再宣言) |
+
+### Stormworks 固有の制限
+
+**編集中は warning、minify のときは error になります。**
+
+| コード | 内容 |
+| --- | --- |
+| `sw-unavailable-global` | Stormworks 実機には存在しない Lua 標準機能です |
+| `input-outside-ontick` | `input` は `onTick` の中でのみ使えます |
+| `output-outside-ontick` | `output` は `onTick` の中でのみ使えます |
+
+デバッグ実行はブラウザ内の本物の Lua なので、これらでも動いてしまいます。
+その差を先に見せるために警告として出しています。
+
+### 抑制アノテーション
+
+| コード | 内容 |
+| --- | --- |
+| `unknown-storm-directive` | `--@storm` の指示が不明です |
+
+```lua
+foo = 1  --@storm ignore(undefined-global)
+```
+
+同じ行の診断を、コードを指定して抑制します。
+**抑制できるのは warning だけです。** error のものは抑制できません。
+
+---
+
+## 実行時エラーの分類
+
+実行中のクラッシュは種類ごとに分類され、原因に応じたヒントが付きます。
+
+| 分類 | 起きること |
+| --- | --- |
+| `index-nil` | `nil` の値に対して添字を参照した |
+| `call-nil` | `nil` を関数として呼んだ |
+| `arith-nil` | `nil` に算術演算を行った |
+| `compare` | 比較できない型どうしを比較した |
+| `concat-nil` | `nil` を文字列連結した |
+| `bad-argument` | 引数の型や数が正しくない |
+| `stack-overflow` | 呼び出しが深くなりすぎた (再帰など) |
+| `time-limit` | 1ティックの実行時間の上限を超えた |
+| `memory-limit` | メモリの上限を超えた |
+| `syntax` | 構文エラー |
+| `unknown` | 上のどれにも当てはまらない。**原文をそのまま表示します** |
+
+分類できないものを黙って握り潰すことはありません。
+
+### エラーの場所
+
+`require` したモジュールの中で起きたエラーは、**そのモジュール名と行番号で表示されます。**
+デバッグ実行はリンクも minify も通さず、書いたソースをそのまま実行しているためです。
+
+<Note>
+  エントリのスクリプト自身で起きたエラーは、行番号は正しく出ますが、
+  ファイル名が実際の名前とは異なる場合があります。
+
+  [Design](/storm-code/guides/design) が生成した Lua で起きたエラーは、
+  自分が書いていないコードを指します。
+</Note>
