@@ -8,6 +8,11 @@
     "dark": "#1D4ED8"
   },
   "favicon": "/favicon.svg",
+  "integrations": {
+    "ga4": {
+      "measurementId": "G-KY6M4YM5KT"
+    }
+  },
   "navigation": {
     "products": [
       {
