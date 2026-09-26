@@ -133,10 +133,28 @@
         "icon": "terminal",
         "groups": [
           {
-            "group": "SDKと確認用アプリ",
+            "group": "はじめに",
             "pages": [
               "storm-lua-engine/index",
+              "storm-lua-engine/getting-started",
               "storm-lua-engine/playground"
+            ]
+          },
+          {
+            "group": "SDKの組み込み",
+            "pages": [
+              "storm-lua-engine/environments",
+              "storm-lua-engine/source-loading",
+              "storm-lua-engine/compiler",
+              "storm-lua-engine/addons",
+              "storm-lua-engine/host-services"
+            ]
+          },
+          {
+            "group": "リファレンス",
+            "pages": [
+              "storm-lua-engine/api-reference",
+              "storm-lua-engine/migration-0-2"
             ]
           }
         ]

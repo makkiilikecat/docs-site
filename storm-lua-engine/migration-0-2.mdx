@@ -1,0 +1,52 @@
+---
+title: "0.1から0.2への変更"
+description: "環境の既定値、Compiler SDK、ソース読み込み、Playgroundの変更点"
+---
+
+このページはv0.2.0の契約を説明します。リリース準備中の段階ではソース・WASM・ガイドを同じcheckoutで確認してください。公開済みの0.1.0が自動的に新しい仕様へ変わるわけではありません。
+
+## 実行環境の明示
+
+0.2.0の既定は`environment:"game"`です。`pcall`、`xpcall`、`error`、`print`などの開発用機能を必要とするホストは、`environment:"extended"`を明示してください。`assert`とグローバル`unpack`もextended側に置いています。
+
+`debug.log`はgameから利用できます。`debug`テーブルにLua標準のデバッグ関数はありません。ホストのブレークポイントや変数検査は、このテーブルとは独立して使えます。
+
+`onLog`の指定だけでprintは有効になりません。`devLogs`や`enableLogs()`はextended専用です。ログ配送先の設定と、Luaへ公開する関数の設定を分けてください。
+
+## 共通コンパイラの追加
+
+`/compiler`に解析、複数モジュールのリンク、最適化、プロパティ走査を追加しました。通常のコンパイルにLua VMは不要で、実行だけの利用者がコンパイラを初期化する必要もありません。
+
+対象はVehicleのみです。Addonの実行を使えても、Addonの解析・最適化はまだ利用できません。
+
+未知の外部グローバルは、ソース内に代入がないことを理由に改名・nil化しません。`_ENV`やextended環境は字句短縮に切り替えます。文字数が従来より増える場合もあるため、ゲームへ出す生成物は改めてサイズを確認してください。
+
+以前からStorm Minを利用していた場合、削除済みの4パスと未知のpass IDはエラーになります。診断の変更、数値モード、property設定は[Compilerガイド](/storm-lua-engine/compiler)を参照してください。
+
+## ホスト拡張とrequire
+
+任意のホスト値・同期関数を`bindings`で渡せます。コンパイラへも同じ環境と拡張名を伝えてください。
+
+開発時のファイル分割には`requireLoader`を追加しました。LifeBoat方式のinclude-onceで、共有グローバル・別チャンク・戻り値破棄を行います。標準Luaのモジュール戻り値方式や、Compilerの静的リンクとは別です。
+
+ローダーの中で`vm.load()`へ再入するのではなく、ホストはソースとチャンク名だけを返します。読み込み先のブレークポイント・継続・命令予算はSDKが扱います。
+
+## Vehicleのreset
+
+0.1.0では、複数回loadしてもresetで再実行するのは最後のソースだけでした。0.2.0は、**正常完了した全loadを元の順番で再実行**します。前置き・本体・後置きを別チャンクで構成した初期化を維持できます。
+
+loadはプログラム交換ではなく追加実行です。過去のコードを残したくない編集の反映には新しいVMを作成してください。失敗したload、完了前にresetで破棄したloadは再実行履歴へ入りません。
+
+Addonのloadは従来どおり初回のみです。`reload(savedata)`とrequireLoaderを組み合わせて、同じ入口から開発用モジュールを再実行できます。
+
+## Playgroundとドキュメント
+
+Engine自身のCLI/Webとして**Storm Lua Engine: Playground**を追加しました。Storm Minは既存のCLI/Webを維持し、両者は同じSDKを利用します。Addon LabのSDK確認機能はPlaygroundへ移し、旧Labの仮物理・3Dワールドは移していません。
+
+利用者向けガイドはdocs.makkii.jpを正本とします。SDKリポジトリには、コードと一緒に変更する仕様・設計・検証・リリース手順と実行可能な例を残します。
+
+## 配布物と保存形式
+
+SDKのJS・型・WASMは同じ版に揃えてください。runtime・raster・compilerは別のWASMなので、相互に生ポインタを渡しません。
+
+この変更で既存savedata codecの形式、描画命令ABI、Composite I/Oのレイアウト、Playgroundのversion付きプロジェクト形式を変更してはいません。過去のAddon Lab形式を自動変換する機能も追加していません。readme、ガイド、APIの対応範囲を確認したうえで更新してください。

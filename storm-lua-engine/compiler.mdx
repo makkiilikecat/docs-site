@@ -1,0 +1,73 @@
+---
+title: "解析・ビルド・最適化"
+description: "Luaソースを解析し、単一ファイルへ構築・短縮するCompiler SDK"
+---
+
+<Note>
+このページはv0.2.0対応です。0.1.0にはCompiler SDKは含まれません。リリース準備中は同じcheckoutのソース・型定義・WASMを使用し、公開済みのパッケージと混在させないでください。
+</Note>
+
+## 操作の選択
+
+| 操作 | 入力 | 結果 |
+| --- | --- | --- |
+| `analyze` | 論理プロジェクトと診断設定 | 構造化された診断 |
+| `build` | 論理プロジェクトとビルド設定 | 単一Lua。非短縮時のソースマップ、短縮時の統計 |
+| `minify` | 単一Luaと最適化設定 | 短縮Lua、診断、適用条件 |
+| `scanProperties` | 単一Lua | 静的に名前が分かるproperty参照 |
+| `passIds` | なし | 登録されている全最適化ID |
+| `passMetadata` | なし | 表示用レコード名を持つ最適化の対応表 |
+
+いずれもLuaを実行しません。ファイルを読み込んだり、VMを作ったり、ゲームのtickを進めたりする処理も含みません。`passMetadata()`の件数と登録パス総数は同じではありません。
+
+コンパイラの対象は現在Vehicleのみです。`target: "addon"`は解析・非短縮ビルドを含めて拒否します。Addonを実行できることとは別の対応範囲です。
+
+## 論理プロジェクト
+
+プロジェクトは`entry`、`modules`、任意の`ambient`を持ちます。`modules`は論理モジュール名からLuaソースへの対応表です。例えば、`{entry:"main", modules:{main:"local m=require('util') return m.value", util:"return {value=7}"}}`です。
+
+ファイルパス、保存、監視、エディタの未保存バッファはホスト側が管理します。単一ソースを短縮するだけなら、プロジェクトを作る必要はありません。
+
+`ambient`は名前空間ごとに、注入可能なモジュールや実行環境専用の定義を指定します。非短縮リンクと最適化ビルドは、同じモジュール構造・注入規則を使用します。
+
+## Rustから使用する
+
+解析は`storm_lua_analysis::analyze(&project, &options)`、プロジェクトビルドは`storm_lua_build::build(&project, &options)`、単一ソースは`storm_lua_build::minify(source, &options)`です。
+
+これらは同期的で、ファイルシステムやLua VMを必要としません。通常のホストは上位APIを使い、明示的な候補処理が必要な場合だけ`storm-lua-minify`を参照します。ASTを直接作る低レベル利用者は、ノードIDと構造の契約を守る必要があります。
+
+[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
+
+## TypeScriptから使用する
+
+`@stormcat-works/storm-lua-engine/compiler`から`loadCompiler`をimportし、`await loadCompiler()`でコンパイラだけを初期化します。この入口のimportだけではWASMをロードせず、初期化しても実行系・描画系のWASMは読み込みません。
+
+単一ソースには`compiler.minify(source, {target:"vehicle", numericMode:"exact", zeroCostNewlines:false})`を使います。複数ソースには、非短縮の`compiler.build(project, {minify:false})`、または`compiler.build(project, {minify:true, targetSize:8192})`を使います。編集中の診断は`compiler.analyze(project)`として分離します。
+
+Nodeでは選択したWASMファイルをホストで読み、`wasmBinary`として渡せます。ブラウザでは既定の同梱アセット、`wasmUrl`、またはbytesを指定します。`moduleUrl`は信頼した生成JSアダプタの場所です。`wasmUrl`と`wasmBinary`は同時に指定しません。
+
+初期化後の処理は同期的です。ブラウザではホストが作ったWorkerから呼び、UIやシミュレーションと分離します。`/compiler-worker`の`CompilerWorkerClient`と`serveCompiler`は通信を共有するためのアダプタです。Workerを自動で作らず、終了・中断はホストが決めます。[環境ガイド](/storm-lua-engine/environments)を参照してください。
+
+## 出力と適用条件
+
+コンパイル成功と目標文字数達成は別です。`ok`、`diagnostics`、`code`、`size`、`search.targetMet`を確認し、ホストが表示・保存・エクスポートの可否を判断します。文字数未達を構文エラーへ置き換えることはありません。
+
+`numericMode: "exact"`と`"tolerant"`は数値変換の契約です。`mode:"safe"`を指定することとexactを指定することは同義ではありません。`assumptions`、`disabledPasses`、`propertyMode`などの結果も確認してください。
+
+非短縮ビルドでは、ソース内容を含む行単位のソースマップを返します。短縮後の全変数・実行順を原文へ完全に復元するデバッグ情報は提供しません。生成物のロードや差し替えはホストの明示操作です。
+
+## 環境と動的参照
+
+既定の環境はgameです。既知の不在機能への依存は、編集時の解析では警告、単一・複数ソースの生成ではエラーになります。nil/typeによる存在確認や、自分で定義した同名ローカルは名前だけで拒否しません。
+
+ソースに代入がない外部グローバルは勝手に改名・nil化しません。`_ENV`へのアクセス・再束縛、extended環境、ホスト関数の置換を使うコードは、識別子・リテラル・トークン順序・行位置を保持する字句短縮を行います。
+
+この経路では`conservative-minification`と`search.mode:"lexical"`を返し、property固定化やAST最適化は行いません。目標文字数を超えても危険な変換へ切り替えません。
+
+開発用の`requireLoader`と、コンパイラの静的リンクは別の仕組みです。ビルドがruntimeのホストローダーを呼び出すことはありません。読み込み方式の違いは[requireと複数チャンク](/storm-lua-engine/source-loading)にまとめています。
+
+## 廃止設定
+
+`general-expression-factoring`、`repeated-expression-factoring`、`scalar-vector-loop-synthesis`、`redundant-nil-fallback-elimination`は削除済みです。未知または廃止されたパスIDは、true/falseのどちらでも`unknown-optimization-pass`になります。数値モードによる正当な除外とは別の扱いです。
+
+実行可能なconsumerと適合性試験はSDKリポジトリで管理します。利用者向けの手順はこのサイトを正本とし、コード内部の実装仕様・テスト記録とは分離しています。

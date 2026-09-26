@@ -6,7 +6,7 @@ description: "Stormworks向けLuaの実行・描画・解析・最適化を組�
 Storm Lua Engineは、Luaの実行、Vehicle/Addonのホスト境界、描画、デバッグ、解析・ビルド・最適化をアプリへ組み込むためのSDKです。必要な機能だけを明示的に初期化して使用します。
 
 <Warning>
-このガイドは環境プロファイルとCompiler SDKを含む次の公開版向けです。公開済み0.1.0にコンパイラ・ホストbindings・Playgroundが含まれるという意味ではありません。対応するリリースが公開されるまでは、同じ開発ブランチのソースとWASMで利用してください。
+このガイドは環境プロファイル・Compiler SDK・開発用requireを含むv0.2.0向けです。公開済み0.1.0にコンパイラ・ホストbindings・Playgroundが含まれるという意味ではありません。対応するリリースが公開されるまでは、同じ開発ブランチのソースとWASMで利用してください。
 </Warning>
 
 ## 使い分け
@@ -48,4 +48,4 @@ Addonの`server`は、ホストが実装する同期関数群です。独自の�
 
 runtime、raster、compilerのWASMは別の実行単位です。ポインタやメモリを共有せず、生成Luaや所有した画素などのデータで接続します。
 
-詳しい型・起動手順・独立した実行例は[SDKリポジトリ](https://github.com/Stormcat-Works/storm-lua-engine)のガイドを参照してください。
+詳しい手順は[導入](/storm-lua-engine/getting-started)、[Compiler](/storm-lua-engine/compiler)、[requireと複数チャンク](/storm-lua-engine/source-loading)、[API一覧](/storm-lua-engine/api-reference)、[0.2への変更](/storm-lua-engine/migration-0-2)を参照してください。実行可能な例と実装契約はSDKリポジトリで管理します。

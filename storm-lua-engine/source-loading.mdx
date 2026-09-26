@@ -1,0 +1,95 @@
+---
+title: "requireと複数チャンク"
+description: "開発実行用のソースローダー、ファイル単位のデバッグ、Vehicleの再初期化"
+---
+
+<Note>
+`requireLoader`と完了済みloadの全履歴を再実行するresetはv0.2.0の機能です。公開済み0.1.0では利用できません。版更新とリリースは別の操作です。
+</Note>
+
+## 二つの用途
+
+| 用途 | 使用する入口 |
+| --- | --- |
+| 実行中に別ファイルの定義を読み、ファイル単位でデバッグする | extendedの`requireLoader` |
+| 前置き・本体・後置きを別チャンクとして順番に実行する | Vehicleの複数回の`load()` |
+| プロジェクトをゲーム向けの単一Luaへ結合する | Compiler SDKの静的`build()` |
+
+開発用ローダーを実装しても、実ゲームに`require`やファイル読み込みが存在することにはなりません。配布用の静的リンクとも別の仕組みです。
+
+## TypeScriptでソースを供給する
+
+`createVehicle`または`createAddon`へ、`environment:"extended"`と`requireLoader`を渡します。ローダーは論理名を受け、`{source, name}`を同期的に返します。
+
+例えばホストの`Map`へ`["utility", {name:"@lib/utility.lua", source:"local offset=4;function helper(x)return x+offset end"}]`を登録し、`requireLoader: name => { const chunk = sources.get(name); if (!chunk) throw new Error("module not found: " + name); return chunk; }`として渡せます。
+
+`source`は文字列または`Uint8Array`、`name`はデバッガ用のチャンク名です。SDKはその名前のファイルを開きません。ファイルパスの検査や、論理名からファイル名への対応、どのソース世代を使用するかはホストが決定します。
+
+ブラウザでは、実行前に必要なソースを実行Workerのメモリへ渡す構成が使えます。同期コールバックからPromiseを返したり、その中で同じ`vm.load()`へ再入したりしないでください。
+
+Nodeでそのまま実行できる例は[source-loading.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/examples/consumer/source-loading.mjs)にあります。パッケージを隔離インストールした環境でも実行検証しています。
+
+## Rustでソースを供給する
+
+`storm_lua_vm::source::{RequireLoader, SourceChunk}`を使用します。`RequireLoader::new`は`Fn(&str) -> Result<SourceChunk, VmError>`を受け取り、`MicrocontrollerConfig.require_loader`または`AddonConfig.require_loader`へ指定します。
+
+`SourceChunk`は`source: Vec<u8>`と`name: String`です。通常の組み込みでmlua型や生ポインタを操作する必要はありません。ローダーはVM単位の機能であり、別のVMのキャッシュを共有しません。
+
+## requireの動作
+
+このローダーは、LifeBoatAPIのシミュレータにある「定義を一度だけ読み込む」方式です。Lua標準の`package.loaded`や、モジュールの戻り値を返す方式ではありません。
+
+**同じ論理名は初回だけ実行し、戻り値を捨てます。** `local m = require("utility")`の`m`はnilになります。`select("#", require("utility"))`の結果は0です。
+
+読み込んだチャンクは同じグローバル環境を使いますが、`local`はファイルごとに独立します。読み込み先で定義したグローバル関数は呼び出し元から使用でき、その関数が捕捉した読み込み先のローカル変数も維持されます。
+
+| 状況 | 動作 |
+| --- | --- |
+| 同じ名前を再度require | 再実行しない |
+| A→B→Aの循環 | 実行前に読み込み済みとするため、2回目のAは再実行しない |
+| 違う名前が同じファイルを返す | 名前が別なので、それぞれ実行する |
+| ソースがない・ローダーが失敗・構文エラー | エラーを返し、読み込み済みにはしない |
+| 実行開始後にLuaがエラー | 読み込み済みは維持する。pcallで捕捉しても同じ |
+| VMをreset/reload | 新しいキャッシュで開始し、必要なソースをホストへ再要求する |
+
+ホストがファイル解決の都合で別名を統合したい場合は、論理名の方針をホスト側で定めてください。SDKがディレクトリを走査して名前を推測することはありません。
+
+## 読み込み先でのデバッグ
+
+ローダーが`name:"@lib/utility.lua"`を返した場合、ブレークポイントにも同じ名前を指定します。例えば`vm.setBreakpoints([{source:"@lib/utility.lua", line:2}])`です。
+
+require先のトップレベルで停止すると、呼び出し元のloadまたはtickは`suspended`を返します。`stack()`には読み込み先と呼び出し元のチャンクが現れ、`resume()`で同じ継続を再開できます。停止中に別のload/tickを重ねることはできません。
+
+読み込み先も、現在のコールバックの命令予算・Luaヒープ制限を使います。requireを呼ぶたびに実行予算が増えることはありません。ホスト自身が長時間処理する同期コールバックを、命令予算で途中停止できるという意味でもありません。
+
+## Vehicleの複数loadとreset
+
+Vehicleでは、`vm.load(prefix,"@prefix.lua")`、`vm.load(main,"@main.lua")`、`vm.load(suffix,"@suffix.lua")`を順番に呼べます。
+
+これは追加実行です。同じソースを2回loadすれば2回とも実行し、前のグローバルやコールバックを削除しません。別チャンクのローカル変数は直接共有されません。プログラム全体を交換したい場合は新しいVMを作成してください。
+
+v0.2.0の`reset()`は、**正常に完了したloadをすべて、元の順番で再実行**します。現在のプロパティ、bindings、requireLoaderを使い、requireのキャッシュも作り直します。
+
+構文エラーや実行失敗に終わったloadは、再実行の履歴へ追加しません。デバッグ停止中のloadはresumeで完了した時点で追加されます。完了前にresetした場合は、その未完了loadを破棄します。
+
+resetは初期化の再実行であり、途中のtick/draw、HTTP返信、プロパティ変更の履歴やホスト側の副作用を再現するスナップショットではありません。ホストの時計、カウンター、ファイル、外部サービスも自動では巻き戻りません。
+
+再実行が失敗した場合、SDKは古いVMを新しい未完成状態へ差し替えません。ただし、再実行中にホストがすでに行った外部I/Oまでは取り消せません。ホストが同じ入力で再現したい場合は、ソースとホストデータのスナップショットを維持してください。
+
+## Addonの初期化
+
+Addonの`load()`は初回の入口だけです。追加loadを許可すると、メニュープロパティやsavedataの復元、`onCreate`の順序が曖昧になるため、この制約は維持しています。
+
+開発時の前置き・本体・後置きには、一つの入口から`require("prefix")`、`require("main")`、`require("suffix")`を呼ぶ構成が使えます。`reload(savedata)`では入口と必要なモジュールを再実行し、その後に保存データを復元します。`start()`は従来どおり別の明示操作です。
+
+## コンパイラとの境界
+
+Compiler SDKの`build()`は静的なモジュール値・ambientの契約を持ち、runtimeの`requireLoader`を呼びません。include-onceの開発プロジェクトを、そのまま標準モジュールプロジェクトと同じものとして扱わないでください。
+
+単一ソースとして開発コードをminifyする場合は、extended環境と`hostBindings:["require"]`を指定できます。この場合は字句短縮になり、requireは実行時に残ります。ゲーム向けの結合済み成果物になったという意味ではありません。
+
+## 上限と安全性
+
+チャンクは1件1MiB、名前は1024バイトまでです。必要ソースの累計は1VMあたり1024件・8MiB、Vehicleがreset用に保持するload履歴は128件・8MiBまでです。バイナリLuaチャンクは拒否します。
+
+ローダーはファイルシステムやネットワークへの暗黙のアクセス権を持ちません。ホストが許可したソースだけを返し、未提供のソースを空文字列で成功扱いしないでください。ゲーム互換環境へのrequireLoader追加と、`bindings`による同じrequire名への重複設定も拒否します。
