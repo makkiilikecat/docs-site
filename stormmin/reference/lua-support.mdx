@@ -3,6 +3,10 @@ title: "対応 Lua 構文と意味保存モデル"
 sidebarTitle: "Lua 構文と意味保存"
 description: "パーサが受理する構文の範囲、Stormworks 固有の制限、最適化の前提"
 ---
+<Note>
+このページの環境プロファイル・字句短縮・診断統一は、Storm Lua EngineのSDK統合ブランチに対応する実装の仕様です。既存の公開済みパッケージへ遡って適用されるものではありません。同じ版のSDKとStorm Minを使用してください。
+</Note>
+
 
 StormMin のパーサは、Lua の構文として受理できるかどうかと、その参照先が Stormworks のサンドボックスで実際に使えるかどうかを別々に判定します。この 2 つは診断としても別のレイヤーで扱われます。
 
@@ -26,35 +30,15 @@ StormMin のパーサは、Lua の構文として受理できるかどうかと�
   引数リストが可変長引数のみ（`(...)`）の関数は、名前付き・無名を問わず現在のパーサではパースエラーになります。`function f(...) end` / `local function f(...) end` / `local g = function(...) end` は `expected expression at <行>:<列>, got )`、文としての `function(...) end` は `expected (, got ... at <行>:<列>` になります。回避するには `function f(a, ...) end` のように名前付き引数を 1 つ以上前置してください。
 </Warning>
 
-## 構文エラーと Stormworks 非対応 API の違い
+## 構文と環境の診断
 
-- **構文エラー**（`syntax-error`）: パーサ/レキサーの段階で検出される、Lua として不正な入力です。常に `severity: error` で、これがあるとコンパイルできません。
-- **Stormworks で利用できないグローバル**（`sw-unavailable-global`）: 構文的には正しい Lua ですが、参照しているグローバル（標準 Lua のビルトインとして知られているが Stormworks には存在しない名前）が実行時に存在しないケースです。検出対象の名前は次の 20 個です。
+構文エラーは常にエラーです。環境に存在しない既知の組み込み関数への依存は、編集用の`analyze()`では`sw-unavailable-global`警告、単一ソースの`compile()`とプロジェクトの`compileProject()`ではエラーになります。非短縮ビルドと目標サイズによる早期終了も同じ条件を使います。
 
-```text
-print, pcall, xpcall, setmetatable, getmetatable,
-rawget, rawset, rawequal, rawlen,
-load, loadstring, loadfile, dofile, unpack,
-os, io, coroutine, collectgarbage, debug, package
-```
+`environment: "game"`が既定です。`debug.log`は利用できますが、`print`、`pcall`、`xpcall`、`error`などは公開しません。`debug`のほかの標準メンバーは提供しません。`environment: "extended"`は明示的な開発・組み込み用であり、ゲーム互換の保証ではありません。
 
-  `require` はコンパイル時に静的展開されるため、このリストには含まれません。`analyze()` では警告、`compileProject()`（minify 実行）ではエラーとして扱われます。自前で同名のグローバルを定義していれば対象外です。
+`type(pcall)`、`pcall == nil`のような存在確認と、自分で定義した同名ローカルは、禁止語として拒否しません。`require`はプロジェクトの静的リンクが処理するもので、実行環境にファイル読み込みを開放する意味ではありません。
 
-<Note>
-  `error`/`assert` は Stormworks 実機での可否が未確認のため、既知の非搭載ビルトインリストには含まれていません（検出対象外）。
-</Note>
-
-## Stormworks で利用できるグローバルルート
-
-resolver が標準で認識するグローバルルートは次の 16 個です。
-
-```text
-math, input, output, property, screen, string, table,
-type, ipairs, pairs, next, select, tonumber, tostring,
-map, self
-```
-
-`input.*`/`output.*` は `onTick` コールバック（`function onTick() ... end` または `onTick = function() ... end` の本体、ネストした内側関数を含む）の中でのみ参照できます。それ以外の場所での参照は `input-outside-ontick`/`output-outside-ontick` として検出されます。関数呼び出しを経由した間接的な参照は現時点では検出されません。
+`input.*`/`output.*`は`onTick`での使用を前提に診断します。ゲームの動作規則と、ツール側の静的に判断できる範囲は区別してください。
 
 ## 意味保存モデル
 
@@ -74,29 +58,25 @@ StormMin はパース後に lexical binding を解決し、最適化の同値性
   pass ごとの ON/OFF（`passToggles`）は通常のチューニングつまみではなく、問題が見つかった場合の一時的な回避手段として提供されています。
 </Note>
 
-## 壊れ得るコードのパターン
+## 動的な_ENVと外部の名前
 
-次のパターンを使うコードは、コンパイル結果に警告診断が付きます。これらは最適化の前提（クローズドワールドな静的解析）を崩す可能性があるためです。
+`_ENV[name]`は有効なLuaです。警告を出しただけでグローバル名を変えてよい、という意味ではありません。ソース内で代入されない外部グローバルを別名へ変えたり、未知の外部値をnilだと決めつけたりしません。
 
-| パターン | 診断コード | メッセージ |
-| --- | --- | --- |
-| `_ENV` への参照 | `env-access` | `_ENV access disables closed-world global assumptions.` |
-| `rawget`/`rawset` の呼び出し | `dynamic-table-key` | `{name} uses a dynamic key; affected tables are excluded from field transformations.` |
-| `load`/`loadstring`/`setmetatable`/`getmetatable`/`pcall`/`xpcall`/`print` の呼び出し | `unsupported-api-call` | `{name} is unavailable or unsupported in Stormworks.` |
+`_ENV`の動的アクセス・別名化・再束縛を含む場合、現在の実装は字句短縮だけを行います。識別子、リテラルの綴り、順序、元の行番号を保持し、コメントと余分な区切りだけを減らします。拡張環境・ホスト関数の置換も同じ保守的な経路を使います。
 
-`_ENV` を介した動的なグローバルアクセスを行うコードは、StormMin がバインディングを静的に解決できないため、最適化の対象から除外されるか、意図しない結果になる可能性があります。`rawget`/`rawset` を使うテーブルはフィールド変換（キーの短縮など）の対象から除外されます。
+結果の`conservative-minification`診断と`search.mode: "lexical"`で確認できます。property固定化やAST最適化は適用されず、目標サイズを超えても意味を変える探索へ切り替えません。元コードにある実行時エラーを解消したり、動的な参照先が必ず存在すると保証したりする機能ではありません。
 
 ## 数値モード
 
 - `tolerant`（既定）: `numericTolerance.abs`/`.rel` の範囲内の近似を許可します。
-- `exact`: 近似やユニット再スケーリングなど、exact semantics を保証できない次の 12 pass を強制的に無効化します。
+- `exact`: 近似やユニット再スケーリングなど、exact semantics を保証できない次のパス を強制的に無効化します。
 
 ```text
 constant-folding, numeric-literal-approximation,
 binding-unit-rescaling, interval-origin-shifting,
 literal-call-folding, split-sign-recomposition-elimination,
 multiplicative-carrier-reassociation, coefficient-carrier-synthesis,
-scalar-vector-loop-synthesis, common-offset-absorption,
+common-offset-absorption,
 constant-wrapper-merging, affine-wrapper-merging
 ```
 

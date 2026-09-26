@@ -1,0 +1,50 @@
+---
+title: "Storm Lua Engine: Playground"
+sidebarTitle: "Playground"
+description: "CLIとWebでSDKの機能・結果・失敗を直接確かめる"
+---
+
+Playgroundは、SDKの全体を小さな確認例から試すためのアプリです。Luaの実行、描画、解析・ビルド・短縮、デバッガ、Addon、値と保存、ホスト関数の接続を扱います。完全なIDEやゲーム世界のシミュレータではありません。
+
+<Note>
+このページは開発ブランチに実装されたPlayground向けです。makkii.jpへの公開は別の配備手順であり、ページの追加だけで公開済みとは扱いません。現在の公開状態と起動手順はSDKリポジトリを確認してください。
+</Note>
+
+## Webの操作
+
+確認例を選び、Luaソース・環境・「SDK操作列」を確認して「最初から実行」を押します。「1操作進める」は同じセッションで1件ずつ操作し、「中断」はWorkerを終了します。
+
+解析・ビルド・最適化だけではLuaを実行しません。`load`がトップレベルを実行し、tick/drawなども別の明示操作です。ページを開く、入力を編集する、保存内容を復元する操作では、自動実行しません。
+
+結果はSDKのレスポンスとして表示されます。描画結果はモニター、診断やエラーは結果欄に出ます。生成Luaはコピーでき、入力と操作列はversion付きJSONで書き出し・読み込みができます。
+
+## 12種類の確認例
+
+| 分類 | 確認例 |
+| --- | --- |
+| 実行と描画 | VehicleのI/Oとプロパティ、Debugger、LuaなしのRaster |
+| 解析と変換 | 複数モジュールとambient、ソースマップ、minify、動的_ENV |
+| 環境と拡張 | game/extended、任意のホストbindings、制限と明示エラー |
+| Addonと保存 | lifecycle、イベント、server、savedata/reload、i64・bytes・特殊数値 |
+| ホストサービス | 明示地図provider、HTTP要求の観測と手入力返信/cancel |
+| API一覧 | SDKの環境・Vehicle/Addon・イベントカタログ |
+
+ホスト関数の固定戻り値、地図の単色画像、HTTPの手入力返信は、選択したテスト入力です。未提供の機能が実ゲームと同じように動くよう装うものではなく、実ネットワークへのプロキシもありません。
+
+## 操作列を変更する
+
+操作列の`{"$source":true}`はソース欄、`{"$environment":true}`は環境の選択を参照します。操作に`as`を付けて結果へ名前を付け、`{"$ref":"compiled.code"}`で後続のloadへ渡せます。公開APIを試す薄い接続処理であり、独自のLua最適化器や描画式を含みません。
+
+## CLI
+
+EngineリポジトリでSDKをビルドし、appの依存を導入した後、`npm --prefix app run cli -- --list`で例を一覧できます。`npm --prefix app run cli -- --recipe vehicle`で実行し、`--project FILE`でWebから書き出したケースを実行します。
+
+`--jsonl`は標準入力の1行につき1操作を同じセッションへ渡します。単一ファイルには`minify FILE`、`run FILE`もあり、拡張環境には`--extended`を明示します。ヘルプは`--help`です。
+
+## 保存と注意点
+
+同じ端末では入力・選択・直近の結果・最新モニターを復元できます。ただしLua VMのメモリや停止位置を保存したものではありません。リロード後に実行する場合は、明示的にやり直してください。
+
+不正なJSONや未対応versionをimportしても、現在の入力を破棄しません。古いAddon Lab形式は自動変換せず、未対応として返します。保存に失敗した場合は警告を表示し、JSONへの書き出しを利用できます。秘密情報や実サービスの認証情報を保存する機能はありません。
+
+[SDKの使い分け](/storm-lua-engine/index)と[Storm Min](/stormmin/index)も参照してください。

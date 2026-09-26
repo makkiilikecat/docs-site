@@ -3,24 +3,22 @@ title: "FAQ・トラブルシューティング"
 sidebarTitle: "FAQ"
 description: "よくある質問とエラーへの対処"
 ---
+<Note>
+このページの環境プロファイル・字句短縮・診断統一は、Storm Lua EngineのSDK統合ブランチに対応する実装の仕様です。既存の公開済みパッケージへ遡って適用されるものではありません。同じ版のSDKとStorm Minを使用してください。
+</Note>
+
 
 <AccordionGroup>
   <Accordion title="Web 版で require を使ったプロジェクトを minify できますか">
     できません。Web 版は単一ファイルの Lua コードのみに対応しています。複数モジュールをリンクする場合は CLI（`--entry`/`--modules-dir`/`--project`）かライブラリ（`compileProject`）を使ってください。詳しくは [require によるモジュール分割](/stormmin/guides/modules) を参照してください。
   </Accordion>
 
-  <Accordion title="minify した後にコードの挙動が変わることがありますか">
-    あります。次のようなコードは最適化の前提（クローズドワールドな静的解析、順序付きの screen 副作用など）を崩す可能性があり、コンパイル結果に警告が付きます。
-
-    - `_ENV` への動的なグローバルアクセス（`env-access`）
-    - `rawget`/`rawset` を使ったテーブル操作（`dynamic-table-key`）
-    - `load`/`loadstring`/`setmetatable`/`getmetatable`/`pcall`/`xpcall`/`print` の呼び出し（`unsupported-api-call`）
-
-    これらの詳細は [対応 Lua 構文と意味保存モデル](/stormmin/reference/lua-support) を参照してください。数値計算については、既定の `tolerant` モードでは指定した許容誤差の範囲で近似が行われます。厳密な数値挙動が必要な場合は `numericMode: "exact"` を指定してください。
+  <Accordion title="_ENVを使ったコードは短縮の対象外ですか">
+    対象外として意味の変わる出力を返すのではなく、現在はトークン・識別子・リテラル・行番号を維持する字句短縮へ切り替えます。`conservative-minification`診断と`search.mode: "lexical"`が返ります。短縮率が低くても、そのままの意味を優先します。元のコードが実ゲームで正しく動くかは別途確認してください。
   </Accordion>
 
   <Accordion title='"... is a standard Lua builtin but is not available in the Stormworks sandbox." というエラーが出ます'>
-    `pcall`、`setmetatable`、`os`、`io`、`coroutine`、`debug` など、標準 Lua には存在するが Stormworks のサンドボックスには存在しないグローバルを参照しています（`sw-unavailable-global`）。`analyze()`/`lint` では警告扱いですが、`compileProject()`/CLI での minify 実行では失敗の原因になります。該当箇所を Stormworks で利用可能な API に書き換えてください。利用可能なグローバルルートの一覧は [対応 Lua 構文と意味保存モデル](/stormmin/reference/lua-support) を参照してください。
+    `pcall`、`error`、`print`、`setmetatable`、`os`、`io`、`coroutine` など、標準 Lua には存在するが Stormworks のサンドボックスには存在しないグローバルを参照しています（`sw-unavailable-global`）。`analyze()`/`lint` では警告扱いですが、単一ソースとプロジェクトのminify/buildではエラーになります。`debug.log`は利用できます。該当箇所を Stormworks で利用可能な API に書き換えてください。利用可能なグローバルルートの一覧は [対応 Lua 構文と意味保存モデル](/stormmin/reference/lua-support) を参照してください。
   </Accordion>
 
   <Accordion title='"input.*"/"output.*" can only be referenced inside onTick() というエラーが出ます'>
@@ -47,8 +45,8 @@ description: "よくある質問とエラーへの対処"
     既知の制限です。`scanProperties`/`passMetadata` はブラウザ環境のエントリーポイントにのみ実装されており、Node.js からは利用できません。`compile`/`compileProject`/`analyze`/`terminate` は両方の環境で利用できます。
   </Accordion>
 
-  <Accordion title="--options に存在しないキーを指定するとどうなりますか">
-    JSON として妥当であれば、認識されないキー（誤ったオプション名や存在しない pass ID）は無視されるだけでエラーにはなりません。JSON 自体が壊れている場合はエラーになります。オプションが意図通り反映されたかどうかは、CLI なら `--json`/`--format json`、ライブラリなら戻り値の `passes`/`disabledPasses`/`assumptions` などのフィールドで確認してください。
+  <Accordion title="--optionsに存在しないpass IDを指定するとどうなりますか">
+    未知・廃止済みのpass IDは`unknown-optimization-pass`として拒否します。falseを指定しても同じです。環境とホスト拡張の組み合わせが不正な場合は`invalid-environment`になります。他の任意JSONキーまで同じ検証がある、という意味ではありません。
   </Accordion>
 
   <Accordion title="native バイナリではなく WASM フォールバックで動いているようです">

@@ -1,0 +1,51 @@
+---
+title: "Storm Lua Engine"
+description: "Stormworks向けLuaの実行・描画・解析・最適化を組み込むSDK"
+---
+
+Storm Lua Engineは、Luaの実行、Vehicle/Addonのホスト境界、描画、デバッグ、解析・ビルド・最適化をアプリへ組み込むためのSDKです。必要な機能だけを明示的に初期化して使用します。
+
+<Warning>
+このガイドは環境プロファイルとCompiler SDKを含む次の公開版向けです。公開済み0.1.0にコンパイラ・ホストbindings・Playgroundが含まれるという意味ではありません。対応するリリースが公開されるまでは、同じ開発ブランチのソースとWASMで利用してください。
+</Warning>
+
+## 使い分け
+
+| 目的 | 入口 |
+| --- | --- |
+| Luaを短縮してゲームへ持ち出す | [Storm Min](/stormmin/index)のCLI/Web |
+| SDKに何ができるか直接試す | [Storm Lua Engine: Playground](/storm-lua-engine/playground) |
+| 自分のRustアプリへ組み込む | syntax/analysis/minify/build、microcontroller/addon、rasterの必要なクレート |
+| 自分のTypeScriptアプリへ組み込む | SDK本体、`/compiler`、`/raster`、`/compiler-worker`などの公開入口 |
+
+Storm Minは引き続き独立したCLI/Webです。Playgroundはその後継や置き換えではなく、同じSDKを使う確認用アプリです。
+
+## ゲーム環境と拡張環境
+
+`environment: "game"`が既定です。`debug.log`は使えますが、`print`、`pcall`、`error`などの拡張関数は公開しません。`debug`テーブルのメンバーは`log`だけで、Lua標準debugライブラリとは異なります。
+
+`environment: "extended"`を選ぶと、開発用の保護呼び出しやprintなどを明示的に使用できます。拡張環境で成功したことは実ゲーム互換の保証ではありません。Vehicle/Addonの実行モデル、Luaに見える環境、数値モード、ホストのデバッガを混同しないでください。
+
+`onLog`は配送先の設定だけで、printを追加しません。ゲーム環境のままでも、ホストのブレークポイント・ステップ・変数検査を使用できます。
+
+## ホストから機能を渡す
+
+Addonの`server`は、ホストが実装する同期関数群です。独自のグローバルや標準関数の置換は、extendedの`bindings.values`と`bindings.functions`へ明示します。設定はソースのload前に適用され、reset/reloadでも維持されます。
+
+コンパイラへも同じ`environment`と`hostBindings`を渡してください。`bindingPaths(bindings)`で実行時の設定からパス一覧を作れます。標準関数を置き換えたことを知らせずに、標準の動作を仮定した最適化を適用しないでください。
+
+## 解析・ビルド・実行を分ける
+
+`analyze`は診断、`build`は複数モジュールのリンクと必要時の最適化、`minify`は単一ソースの短縮です。これらはLuaを実行しません。実行するのは、利用者が生成物を明示的にVMへloadした後です。
+
+単一ソースとプロジェクトで、既知の非対応関数の判定を共有します。編集時は警告、ゲーム向け生成ではエラーです。`_ENV`の動的アクセスやextended環境は、名前・トークン・行番号を維持する字句短縮になります。`conservative-minification`と`search.mode: "lexical"`で確認できます。
+
+コンパイラの対象は現在Vehicleのみです。Addonの実行は利用できますが、Addonの解析・最適化は未対応として明示的に拒否します。
+
+## ブラウザから使う
+
+`loadCompiler()`はコンパイラ用WASMだけをロードします。初期化後の`compiler.minify()`は同期処理なので、UIを止めないようホストが作ったmodule Workerから呼びます。`CompilerWorkerClient`と`serveCompiler`は通信を共通化するアダプタで、Workerを勝手に生成しません。
+
+runtime、raster、compilerのWASMは別の実行単位です。ポインタやメモリを共有せず、生成Luaや所有した画素などのデータで接続します。
+
+詳しい型・起動手順・独立した実行例は[SDKリポジトリ](https://github.com/Stormcat-Works/storm-lua-engine)のガイドを参照してください。

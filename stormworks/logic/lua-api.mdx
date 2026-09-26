@@ -118,7 +118,7 @@ async.httpGet(port, url)
 
 | ライブラリ | 利用できる関数 |
 | --- | --- |
-| グローバル | `pairs`, `ipairs`, `next`, `tostring`, `tonumber`, `type`, `select`, `unpack`, `pcall`, `error` |
+| グローバル | `pairs`, `ipairs`, `next`, `tostring`, `tonumber`, `type`, `select`, `unpack` |
 | `math` | `abs`, `ceil`, `floor`, `max`, `min`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`, `log`, `exp`, `pi`, `huge`, `random`, `randomseed`, `deg`, `rad`, `fmod`, `modf` |
 | `string` | `format`, `sub`, `len`, `find`, `gsub`, `upper`, `lower`, `rep`, `reverse`, `byte`, `char`, `match`, `gmatch` |
 | `table` | `insert`, `remove`, `sort`, `concat`, `unpack`, `move`, `pack` |
@@ -126,10 +126,16 @@ async.httpGet(port, url)
 `math.atan` は1引数・2引数のどちらの呼び出し方にも対応しますが、`math.atan2` という別名の関数は存在しません。
 
 <Warning>
-`io`, `os`, `require`, `load`, `dofile`, `loadfile`, `debug`, `rawset`, `rawget` は使用できません。`print` によるコンソール出力もありません。
+`io`, `os`, `require`, `load`, `dofile`, `loadfile`, `rawset`, `rawget` は使用できません。`print` によるコンソール出力もありません。
 </Warning>
 
 ## その他の注意点
 
 - Lua はサーバーと各クライアントで独立して実行されます。マルチプレイでは `math.random()` の結果がクライアントごとに異なります。Composite の入出力は同期されますが、`screen.*` による描画結果はクライアントごとに異なる場合があります。
 - ビークルがアンロード（デスポーン）されると、Lua のすべての変数がリセットされます。ティックをまたいで値を保持したい場合は、Memory Register ブロックなどロジック側の状態を使う必要があります。
+
+## ログとLua標準機能の違い
+
+実ゲームでは`debug.log(...)`を使用できます。`debug`テーブルはログ用で、Lua標準の`debug.getinfo`や`debug.sethook`などを提供するものではありません。`print`、`pcall`、`xpcall`、`error`は利用できません。
+
+実行ツールがこれらの関数を追加提供している場合、その環境で成功しても実ゲームで動くとは限りません。ゲーム用コードの確認では、実ゲーム向けの環境設定を選んでください。ホストアプリのデバッガ機能と、Luaソースから呼べるdebugテーブルは別です。

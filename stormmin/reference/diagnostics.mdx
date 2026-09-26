@@ -50,14 +50,18 @@ description: "compile/compileProject/analyze が返す Diagnostic の code 一�
 | `ambient-dynamic-access` | ambient 名前空間への動的（非定数キー）アクセスをしている |
 | `ambient-assigned` | ambient 名前空間に代入しようとしている |
 
-### 最適化の前提を崩しうるパターン（compile 実行時、warning）
+### 環境と安全な短縮経路（SDK統合版）
 
-| コード | 発生条件 |
+公開済みの旧版には異なる警告動作があります。以下は環境契約を統一したSDK統合版に対応します。
+
+| コード | 重大度・意味 |
 | --- | --- |
-| `env-access` | `_ENV` への参照がある |
-| `dynamic-table-key` | `rawget`/`rawset` を呼び出している |
-| `unsupported-api-call` | `load`/`loadstring`/`setmetatable`/`getmetatable`/`pcall`/`xpcall`/`print` を呼び出している |
-| `compile-failed` | 上記以外のコンパイルパイプライン内部エラー（`syntax-error` とは別扱い） |
+| `conservative-minification` | warning。_ENVや拡張環境のため、トークン・識別子・行位置を維持する字句短縮を選択したことを通知 |
+| `invalid-environment` | error。game環境でhostBindingsを要求するなど、環境・拡張設定の組み合わせが不正 |
+| `unknown-optimization-pass` | error。未知または廃止済みのpass IDが設定されている。falseでも拒否 |
+| `compile-failed` | error。構文エラー以外のコンパイル内部失敗 |
+
+旧版の`env-access`や`unsupported-api-call`警告は、意味の壊れた生成物を成功扱いする根拠にはしません。統合版では適用可能な経路を選ぶか、生成前にエラーを返します。
 
 ### lint（analyze 実行時、warning）
 
@@ -73,7 +77,7 @@ description: "compile/compileProject/analyze が返す Diagnostic の code 一�
 
 | コード | 発生条件 | `analyze()` | `compileProject()` |
 | --- | --- | --- | --- |
-| `sw-unavailable-global` | 標準 Lua のビルトインだが Stormworks に存在しないグローバルを参照 | warning | error |
+| `sw-unavailable-global` | 選択した環境で既知の不在機能に依存（nil/type確認や同名ローカルは除く） | warning | error。単一ソースcompileでも同じ |
 | `input-outside-ontick` | `onTick` の外で `input.*` を参照 | warning | error |
 | `output-outside-ontick` | `onTick` の外で `output.*` を参照 | warning | error |
 

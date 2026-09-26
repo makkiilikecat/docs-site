@@ -3,6 +3,10 @@ title: "ライブラリ API リファレンス"
 sidebarTitle: "ライブラリ API"
 description: "@stormcat-works/stormmin が公開する関数・オプション・戻り値の型"
 ---
+<Note>
+このページの環境プロファイル・字句短縮・診断統一は、Storm Lua EngineのSDK統合ブランチに対応する実装の仕様です。既存の公開済みパッケージへ遡って適用されるものではありません。同じ版のSDKとStorm Minを使用してください。
+</Note>
+
 
 `@stormcat-works/stormmin` が公開する関数は次の 6 つです。
 
@@ -28,7 +32,7 @@ terminate(): void
 | `mode` | `"smallest" \| "safe"` | `"smallest"` | `smallest` は aggressive なサイズ最小化。`safe` は host math の差などに対して保守的な変換だけを使用します。 |
 | `property` | `PropertyConfig` | `{ mode: "runtime" }` | `property.get*` の扱い。下記参照。 |
 | `zeroCostNewlines` | `boolean` | `true` | 文字数コストがゼロの位置に改行を入れるかどうか。 |
-| `passToggles` | `Record<string, boolean>` | `{}` | 個別 pass の有効/無効。認識しない pass ID は無視されます。 |
+| `passToggles` | `Record<string, boolean>` | `{}` | 個別 pass の有効/無効。未知・廃止済みのpass IDはエラーになります。 |
 | `numericMode` | `"tolerant" \| "exact"` | `"tolerant"` | `tolerant` は `numericTolerance` の範囲内での近似を許可。`exact` は近似やユニット再スケーリングなど exact semantics を保証できない pass を無効化します。 |
 | `numericTolerance` | `{ abs: number, rel: number }` | `{ abs: 0.000001, rel: 0.000001 }`（tolerant時） | 数値近似を許容する絶対誤差・相対誤差。 |
 | `searchMode` | `"exhaustive" \| "fast"` | `"exhaustive"` | `fast` は簡易なサイズ見積りを使う bounded beam 探索。 |
@@ -50,16 +54,11 @@ terminate(): void
 
 pack/unpack、bit 演算、index、numeric-for の境界など exact route に到達する binding は、`tolerant` モードでも近似の対象になりません。
 
-`passToggles` に指定できる pass ID の一覧は `passMetadata()` で取得できます。既定で無効な pass は `general-expression-factoring` / `repeated-expression-factoring` / `scalar-vector-loop-synthesis` / `redundant-nil-fallback-elimination` の 4 つです。加えて `numericMode: "exact"` の場合は、次の 12 pass が強制的に無効化されます（無効化された pass は結果の `disabledPasses` で確認できます）。
+廃止済みの`general-expression-factoring`、`repeated-expression-factoring`、`scalar-vector-loop-synthesis`、`redundant-nil-fallback-elimination`は、true/falseのどちらを指定しても`unknown-optimization-pass`になります。現在の登録は67件です。表示用の`passMetadata()`は、全登録ID一覧と同じではありません。Engine SDKの全IDは`passIds()`で取得できます。
 
-```text
-constant-folding, numeric-literal-approximation,
-binding-unit-rescaling, interval-origin-shifting,
-literal-call-folding, split-sign-recomposition-elimination,
-multiplicative-carrier-reassociation, coefficient-carrier-synthesis,
-scalar-vector-loop-synthesis, common-offset-absorption,
-constant-wrapper-merging, affine-wrapper-merging
-```
+`numericMode: "exact"`では、その意味論に合わない変換だけを無効化します。一部パスはexact-safeな部分だけを利用します。実際の`disabledPasses`と数値前提を確認してください。
+
+環境設定には`environment?: "game" | "extended"`（既定game）と`hostBindings?: string[]`があります。ホスト値・関数のdot区切りパスを宣言するにはextendedが必要です。実行環境と同じ設定を渡してください。extendedと_ENV入力はトークンと行番号を保つ字句短縮を使います。
 
 ## CompileResult
 
@@ -104,7 +103,7 @@ constant-wrapper-merging, affine-wrapper-merging
 
 | フィールド | 型 | 説明 |
 | --- | --- | --- |
-| `mode` | `"exhaustive" \| "fast" \| "satisficing"` | 実際に使われた探索モード。`targetSize` 指定時は `satisficing`。 |
+| `mode` | `"exhaustive" \| "fast" \| "satisficing"` | 実際の経路。通常の目標サイズ探索は`satisficing`、意味を保持する字句短縮は`lexical`です。 |
 | `beamWidth` | `number \| null` | `fast` 探索時（satisficing でない場合）の beam 幅。 |
 | `candidates` / `attempted` | `number` | 候補数・試行数。 |
 | `parseRejected` / `semanticRejected` | `number` | パース/意味検証で棄却された候補数。 |

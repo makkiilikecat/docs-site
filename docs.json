@@ -128,6 +128,20 @@
         ]
       },
       {
+        "product": "Storm Lua Engine",
+        "description": "Lua SDKと機能確認用Playground",
+        "icon": "terminal",
+        "groups": [
+          {
+            "group": "SDKと確認用アプリ",
+            "pages": [
+              "storm-lua-engine/index",
+              "storm-lua-engine/playground"
+            ]
+          }
+        ]
+      },
+      {
         "product": "Storm Editor",
         "description": "非公式ビークルエディター",
         "icon": "pen-ruler",
