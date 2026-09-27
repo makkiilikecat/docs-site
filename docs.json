@@ -146,6 +146,7 @@
               "storm-lua-engine/environments",
               "storm-lua-engine/source-loading",
               "storm-lua-engine/compiler",
+              "storm-lua-engine/source-maps",
               "storm-lua-engine/addons",
               "storm-lua-engine/host-services"
             ]
