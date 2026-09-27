@@ -4,7 +4,7 @@ description: "gameとextended、bindings、Workerとデバッガ"
 ---
 
 <Note>
-このページはv0.2.0の利用契約です。リリース準備中のcheckoutを利用する場合は、そのソースとビルド済みWASMを同じ版に揃えてください。マニフェストの版更新だけではnpmや本番サイトへの公開は行われません。
+このページは公開版v0.2.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
 ## 普通に実ゲーム向けLuaを試す
@@ -55,4 +55,4 @@ watchは明示的にLua式を評価し、副作用を起こし得ます。表示
 
 `client.dispose()`は未完了の要求を拒否し、listenerを外します。CPU処理の中断や独立したメモリの破棄は、所有者であるホストが`worker.terminate()`で行います。runtime用とcompiler用のWorkerを分離すれば、コード変換と実行の寿命を独立に管理できます。
 
-詳細な判定と制約は[環境仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/docs/specs/environments.md)、コンパイラ操作は[Compiler guide](/storm-lua-engine/compiler)、通常実行は[利用側API](/storm-lua-engine/api-reference)を参照してください。
+詳細な判定と制約は[環境仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/docs/specs/environments.md)、コンパイラ操作は[Compiler guide](/storm-lua-engine/compiler)、通常実行は[利用側API](/storm-lua-engine/api-reference)を参照してください。

@@ -4,7 +4,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 ---
 
 <Note>
-このページはv0.2.0対応です。0.1.0にはCompiler SDKは含まれません。リリース準備中は同じcheckoutのソース・型定義・WASMを使用し、公開済みのパッケージと混在させないでください。
+このページは公開版v0.2.0に対応します。0.1.0にはCompiler SDKは含まれません。対応するソース・型定義・WASMを同じ版で使用してください。
 </Note>
 
 ## 操作の選択
@@ -36,7 +36,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 
 これらは同期的で、ファイルシステムやLua VMを必要としません。通常のホストは上位APIを使い、明示的な候補処理が必要な場合だけ`storm-lua-minify`を参照します。ASTを直接作る低レベル利用者は、ノードIDと構造の契約を守る必要があります。
 
-[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
+[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
 
 ## TypeScriptから使用する
 

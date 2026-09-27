@@ -4,10 +4,10 @@ description: "Vehicle・Addon・描画・デバッグ・保存の公開API"
 ---
 
 <Note>
-このページはv0.2.0の利用契約です。リリース準備中のcheckoutを利用する場合は、そのソースとビルド済みWASMを同じ版に揃えてください。マニフェストの版更新だけではnpmや本番サイトへの公開は行われません。
+このページは公開版v0.2.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
-この一覧はエンジンを利用するアプリケーション向けです。Luaスクリプト内で見えるゲームAPIは、モード別の`VEHICLE_API_CATALOG`／`ADDON_API_CATALOG`と[仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/docs/specs/api.md)を参照してください。
+この一覧はエンジンを利用するアプリケーション向けです。Luaスクリプト内で見えるゲームAPIは、モード別の`VEHICLE_API_CATALOG`／`ADDON_API_CATALOG`と[仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/docs/specs/api.md)を参照してください。
 
 ## 初期化と生成
 
@@ -68,7 +68,7 @@ Addonには`io`、`draw`、`frame`、`setProperties`はありません。vehicle
 
 両モードで`setBreakpoints(points)`、`resume(mode?)`、`stack()`、`locals(level?)`、`upvalues(level?)`、`expandTable(handle,start?,limit?)`、`evaluateWatch(expression,level?)`を提供します。標準配布のruntimeにはdebug featureを含めます。
 
-modeはcontinue／into／over／outです。watchは副作用を起こす明示操作。localsとtableのraw検査はユーザーmetamethodを実行しません。デバッグtable handleはVMと停止世代に紐づき、resume／watch／reload後に使い回せません。[詳細](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/docs/specs/debugger.md)
+modeはcontinue／into／over／outです。watchは副作用を起こす明示操作。localsとtableのraw検査はユーザーmetamethodを実行しません。デバッグtable handleはVMと停止世代に紐づき、resume／watch／reload後に使い回せません。[詳細](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/docs/specs/debugger.md)
 
 ## 値と保存ヘルパー
 

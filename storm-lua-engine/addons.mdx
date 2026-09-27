@@ -4,7 +4,7 @@ description: "イベント・ホストserver・保存と再初期化"
 ---
 
 <Note>
-このページはv0.2.0の利用契約です。リリース準備中のcheckoutを利用する場合は、そのソースとビルド済みWASMを同じ版に揃えてください。マニフェストの版更新だけではnpmや本番サイトへの公開は行われません。
+このページは公開版v0.2.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
 ## ホストとエンジンの担当
@@ -33,7 +33,7 @@ TSのホスト関数は`(...args: LuaValue[]) => readonly LuaValue[]`です。�
 
 ホスト関数は**同期**です。Promiseは拒否します。外部データの取得が必要なら、先に取得したsnapshotを同期的に返すか、HTTPの要求・返信APIを使用します。同じWASM moduleへの再入も禁止です。ホスト関数内でイベントが発生した場合は、関数の戻り値を返した後に、アプリ側のイベントキューからdispatchしてください。
 
-Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`と`VmError`を使うだけでよく、通常のホスト実装にmlua型は必要ありません。[Rust例](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/conformance/examples/addon_host.rs)
+Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`と`VmError`を使うだけでよく、通常のホスト実装にmlua型は必要ありません。[Rust例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/conformance/examples/addon_host.rs)
 
 ## プロパティと保存・復元
 
@@ -51,7 +51,7 @@ Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`�
 
 Luaやホスト関数の実行中に失敗したAddonは、新規VMまたは保存済みcheckpointからのreloadで復旧します。実行前から持っていたcheckpointを保持し、失敗した状態から必ず保存できるとは想定しないでください。ホストが既に実行したワールド変更や外部I/Oは自動ロールバックされません。
 
-完全な実行例は[Node利用例](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/examples/consumer/node.mjs)。厳密な対応範囲・限界は[Addon仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/docs/specs/addon.md)にまとめています。
+完全な実行例は[Node利用例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/examples/consumer/node.mjs)。厳密な対応範囲・限界は[Addon仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/docs/specs/addon.md)にまとめています。
 
 ## 開発用の複数ファイル
 

@@ -4,7 +4,7 @@ description: "複数ファイルをgame環境で実行し、停止位置とエ�
 ---
 
 <Note>
-このページはv0.2.0向けです。公開準備中は対応するソース・型・WASMを同じ版で使用してください。0.2.0のマップは非短縮リンク結果のみを対象にし、最適化後のマップは返しません。
+このページは公開版v0.2.0に対応します。ソース・型・WASMを同じ版で使用してください。0.2.0のマップは非短縮リンク結果のみを対象にし、最適化後のマップは返しません。
 </Note>
 
 ## 対応する経路
@@ -43,7 +43,7 @@ SDKリポジトリの`examples/consumer/source-map.mjs`は、通常のSource Map
 
 `eachMapping()`で元位置に完全一致する生成行を集め、`originalPositionFor()`で停止位置を逆引きする方法です。SDK自体のnpm実行時依存へSource Map consumerを追加する必要はありません。位置変換を行うホストだけが利用します。
 
-[実行例のソース](https://github.com/Stormcat-Works/storm-lua-engine/blob/develop/examples/consumer/source-map.mjs)
+[実行例のソース](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/examples/consumer/source-map.mjs)
 
 ## 対応精度と合成行
 
