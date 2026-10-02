@@ -1,0 +1,165 @@
+---
+title: "AI / Agent 連携"
+sidebarTitle: "AI / Agent 連携"
+description: "Storm Min の AI Handoff、docs MCP、CLI/npm API、Source Map API の使い分け"
+---
+
+Storm Min Web の「AIに渡す」は、現在の Lua・コンパイラ設定・直近の結果と、AI / Agent が利用できる公式ツールを 1 つの Handoff にまとめます。Storm Min 自身が AI 推論を実行したり、コードを外部サービスへ自動送信したりする機能ではありません。
+
+## AI Handoff
+
+Handoff は 2 形式で出力できます。
+
+| 形式     | 用途                                                    |
+| -------- | ------------------------------------------------------- |
+| Markdown | ChatGPT、Claude、その他の対話型 AI へそのまま貼り付ける |
+| JSON     | Agent や自動処理から機械的に読み取る                    |
+
+入力 Lua 全文は常に含まれます。「現在の設定を含める」を有効にすると compile options と Property 値も含まれ、「直近の最適化結果を含める」を有効にすると生成 Lua・統計・診断・探索情報も含まれます。
+
+<Warning>
+  Handoff には Lua 原文が含まれます。Property 値を含める場合は、その値も外部 AI
+  へ渡す内容になります。共有前にプレビューを確認してください。
+</Warning>
+
+Source Map 本体は Handoff へ自動埋め込みしません。生成済みかどうかだけを記録します。最適化理由や元位置の追跡が必要な場合は、対応する `.map` を生成 Lua と一緒に渡してください。
+
+## docs MCP
+
+公開ドキュメントは docs.makkii.jp が正本です。MCP を利用できるクライアントでは、次の docs 検索 MCP を接続できます。
+
+`https://docs.makkii.jp/mcp`
+
+この MCP は **ドキュメント検索用** です。Storm Min のコンパイルを実行する API ではありません。
+
+AI / Agent には、Storm Min や Storm Lua Engine の挙動を推測する前に docs MCP で該当仕様を検索させる運用を推奨します。MCP を利用できない環境では、このサイトの通常のページを参照してください。
+
+## 利用できるツール
+
+| 手段                          | AI / Agent からの用途                | コンパイル |
+| ----------------------------- | ------------------------------------ | ---------- |
+| docs MCP                      | 正式な使い方・API・制約を検索        | しない     |
+| Storm Min Web                 | 手動編集・Handoff作成・結果取得      | する       |
+| Storm Min CLI                 | Agent のローカルコマンドから minify  | する       |
+| `@stormcat-works/stormmin`    | Node.js / ブラウザへ組み込む         | する       |
+| Storm Lua Engine compiler SDK | Source Map検証や低レベルcompiler統合 | する       |
+| Storm Min HTTP API            | **提供していません**                 | —          |
+
+Storm Min Web は静的クライアントとして配信されています。Physics Frame Codegen や Number Codec Compiler にあるような公開 HTTP 生成 API と混同しないでください。
+
+## Storm Min の CLI / npm API
+
+CLI は npm から利用できます。
+
+```sh
+npm i -g @stormcat-works/stormmin
+stormmin input.lua -o output.lua
+```
+
+ライブラリでは次の関数を公開しています。
+
+```ts
+import {
+  compile,
+  compileProject,
+  analyze,
+  scanProperties,
+  passMetadata,
+  terminate,
+} from "@stormcat-works/stormmin";
+```
+
+単一ファイルの minify 例です。
+
+```ts
+const result = await compile(source, {
+  mode: "smallest",
+  targetSize: 8192,
+  sourceMap: true,
+});
+
+if (!result.ok || result.code === undefined) {
+  throw new Error(JSON.stringify(result.diagnostics));
+}
+
+console.log(result.code);
+```
+
+各関数とオプションは [ライブラリ API](/stormmin/reference/api)、CLI は [CLI リファレンス](/stormmin/reference/cli) を参照してください。
+
+## Source Map を AI から調べる
+
+Storm Min が生成した最適化後 Source Map の意味論と検証は Storm Lua Engine が所有します。
+
+```sh
+npm i @stormcat-works/storm-lua-engine@0.3.0
+```
+
+```ts
+import { loadCompiler } from "@stormcat-works/storm-lua-engine/compiler";
+
+const compiler = await loadCompiler();
+const details = compiler.validateSourceMap(code, map);
+```
+
+`validateSourceMap(code, map)` は生成 Lua と map の組が一致していることを検証した上で、最適化元・理由・関連元などを含む `OptimizationMap` を返します。詳細は [最適化後 Source Map](/storm-lua-engine/source-maps) を参照してください。
+
+生成後の Lua を手作業で変更した場合、元の map はその Lua とは対応しません。
+
+## Agent に推奨する順序
+
+<Steps>
+  <Step title="Handoffを読み取る">
+    入力 Lua、現在の options、直近の結果と診断を確認します。
+  </Step>
+  <Step title="docs MCPで仕様を確認する">
+    Stormworks/Lua/Storm Min/Storm Lua Engine
+    の挙動を推測せず、該当ページを検索します。
+  </Step>
+  <Step title="Storm Minを機械的に実行する">
+    CLI または npm API
+    が利用できる場合、手作業のコードゴルフより先に既存コンパイラで結果を再現します。
+  </Step>
+  <Step title="必要ならSource Mapを検査する">
+    対応する `.map` が渡されている場合だけ、Storm Lua Engine の
+    `validateSourceMap` で由来を確認します。
+  </Step>
+  <Step title="変更を再検証する">
+    最終コードを再度 Storm Min
+    に通し、文字数と診断を確認します。ゲーム内での動作確認も必要です。
+  </Step>
+</Steps>
+
+## JSON Handoff
+
+JSON 版は `kind: "stormmin-ai-handoff"`、`schemaVersion: 1` を持ちます。主要フィールドは次のとおりです。
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "stormmin-ai-handoff",
+  "environment": {
+    "stormMin": { "version": "0.7.1", "revision": "..." },
+    "luaEngine": { "version": "0.3.0", "revision": "..." },
+    "stormworksCharacterLimit": 8192
+  },
+  "task": {
+    "source": "...",
+    "sourceCharacters": 1234
+  },
+  "tooling": {
+    "docsMcp": { "url": "https://docs.makkii.jp/mcp" },
+    "stormMin": {
+      "npm": "@stormcat-works/stormmin",
+      "cli": "stormmin",
+      "publicHttpCompileApi": false
+    }
+  },
+  "compiler": {
+    "options": {},
+    "result": {}
+  }
+}
+```
+
+省略オプションを選んだ場合、設定や直近結果のフィールドは出力されません。

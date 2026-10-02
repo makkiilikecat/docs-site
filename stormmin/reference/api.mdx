@@ -34,6 +34,8 @@ terminate(): void
 | `searchMode` | `"exhaustive" \| "fast"` | `"exhaustive"` | `fast` は簡易なサイズ見積りを使う bounded beam 探索。 |
 | `searchBeamWidth` | `number` | `4` | `fast` 探索時の beam 幅。1〜16 にクランプされます（小数は切り捨て後クランプ）。 |
 | `targetSize` | `number` | 未指定 | 指定すると OBJ-2 satisfaction-style search が有効になります。詳細は [目標サイズ探索](/stormmin/guides/target-size) を参照してください。 |
+| `sourceMap` | `boolean` | `false` | 最適化後の Source Map v3 + `x_storm` provenance を生成します。 |
+| `sourceName` | `string` | `"input.lua"` | 単一ファイル Source Map で使う原文ラベルです。 |
 
 `PropertyConfig`:
 
@@ -63,6 +65,7 @@ pack/unpack、bit 演算、index、numeric-for の境界など exact route に�
 | `ok` | `boolean` | 成功したかどうか。 |
 | `error` | `string`（非推奨） | 失敗時のエラーメッセージ。 |
 | `code` | `string` | minify 後の Lua コード（成功時）。 |
+| `map` | `string` | `sourceMap: true` のとき、`code` と対応する最適化後 Source Map JSON。 |
 | `original` | `number` | 元のコードの長さ（UTF-16 コード単位）。 |
 | `size` | `number` | 出力コードの長さ（UTF-16 コード単位）。 |
 | `saved` | `number` | `original - size`。 |
@@ -116,7 +119,7 @@ pack/unpack、bit 演算、index、numeric-for の境界など exact route に�
 
 | フィールド | 型 | 説明 |
 | --- | --- | --- |
-| `map` | `string` | Source Map v3 の JSON 文字列。`minify: false` のときのみ含まれます。 |
+| `map` | `string` | Source Map v3 の JSON 文字列。`minify: false` では従来どおり生成され、`minify: true` では `sourceMap: true` のとき含まれます。 |
 | `usedModules` | `string[]` | 実際にリンクに使われたモジュールキーの一覧。 |
 | `injectedAmbient` | `Record<string, string[]>` | 注入された ambient 名前空間のメンバー一覧。 |
 

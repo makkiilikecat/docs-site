@@ -18,14 +18,18 @@ StormMin は 3 つの形態で利用できます。ビークルに貼る Lua を
         左側の "Original Lua" エディタに、ビークル/マイクロコントローラーの Lua コードを貼り付けます。
       </Step>
       <Step title="最短化実行を押す">
-        "最短化実行 (Optimize)" ボタンを押すと、WASM 上のコンパイラがブラウザの Worker 内で minify を実行します。
+        右側の `Output` タブにある「最短化実行」を押すと、WASM 上のコンパイラがブラウザの Worker 内で minify を実行します。
       </Step>
       <Step title="出力を取得する">
-        右側の "Optimized Output" に結果が表示されます。"Copy" でクリップボードにコピー、".lua" でファイルとしてダウンロードできます。
+        中央の "Optimized Lua" に結果が表示されます。右側の `Output` タブから Copy、Lua ファイル保存、Source Map を有効にした場合は `.map` 保存を利用できます。
       </Step>
     </Steps>
 
     {/* TODO screenshot: Web 版のメイン画面（左に入力、右に出力、上部に容量バナー） */}
+
+    <Note>
+      外部AI / Agentへ現在のLua・設定・結果を渡す場合は、ヘッダーの「AIに渡す」から Markdown / JSON Handoff を作成できます。利用できるdocs MCPやCLI/npm APIは [AI / Agent 連携](/stormmin/guides/ai-agent) を参照してください。
+    </Note>
 
     <Warning>
       StormMin 全体が β 版のため、Web 版の画面には「β版につき、出力コードにコンパイラ起因のバグが含まれる可能性があります。ゲーム内で必ず動作確認してください。」という警告が常に表示されます。CLI やライブラリで minify した場合も同様に、ゲーム内での動作確認を必ず行ってください。
