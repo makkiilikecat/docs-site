@@ -4,10 +4,10 @@ description: "Vehicle・Addon・描画・デバッグ・保存の公開API"
 ---
 
 <Note>
-このページは公開版v0.2.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
+このページはv0.3.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
-この一覧はエンジンを利用するアプリケーション向けです。Luaスクリプト内で見えるゲームAPIは、モード別の`VEHICLE_API_CATALOG`／`ADDON_API_CATALOG`と[仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/docs/specs/api.md)を参照してください。
+この一覧はエンジンを利用するアプリケーション向けです。Luaスクリプト内で見えるゲームAPIは、モード別の`VEHICLE_API_CATALOG`／`ADDON_API_CATALOG`と[仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/docs/specs/api.md)を参照してください。
 
 ## 初期化と生成
 
@@ -68,7 +68,7 @@ Addonには`io`、`draw`、`frame`、`setProperties`はありません。vehicle
 
 両モードで`setBreakpoints(points)`、`resume(mode?)`、`stack()`、`locals(level?)`、`upvalues(level?)`、`expandTable(handle,start?,limit?)`、`evaluateWatch(expression,level?)`を提供します。標準配布のruntimeにはdebug featureを含めます。
 
-modeはcontinue／into／over／outです。watchは副作用を起こす明示操作。localsとtableのraw検査はユーザーmetamethodを実行しません。デバッグtable handleはVMと停止世代に紐づき、resume／watch／reload後に使い回せません。[詳細](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/docs/specs/debugger.md)
+modeはcontinue／into／over／outです。watchは副作用を起こす明示操作。localsとtableのraw検査はユーザーmetamethodを実行しません。デバッグtable handleはVMと停止世代に紐づき、resume／watch／reload後に使い回せません。[詳細](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/docs/specs/debugger.md)
 
 ## 値と保存ヘルパー
 
@@ -98,3 +98,10 @@ raw statusの0はcompleted、7はsuspended、8はmissingです。JSの引数検�
 ## 開発時のソース読み込み
 
 `requireLoader(name)`は`{source, name}`を同期的に返します。extended専用で、LifeBoat方式の初回実行・戻り値破棄・共有グローバルを提供します。ファイル解決はホスト側です。詳細は[requireと複数チャンク](/storm-lua-engine/source-loading)を参照してください。
+
+
+## 最適化後Source Map
+
+`/compiler`の`Compiler.minify`、`build`、`buildLifeboat`は`sourceMap:true`に対応します。返された`code`と`map`を`Compiler.validateSourceMap(code,map)`へ渡すと、`OptimizationMap`を取得します。`/compiler-worker`の`CompilerWorkerClient`も同じ操作をPromiseで返します。
+
+`OptimizationMap`、`OptimizationOrigin`、`OptimizationMapping`、`OptimizationReason`、`OriginRelation`などの型は`/compiler`から利用できます。`map`はJSON文字列、詳細範囲は半開UTF-8バイト区間です。標準mapの位置はUTF-16列なので、エディタの位置形式と区別してください。[利用手順](/storm-lua-engine/source-maps)。

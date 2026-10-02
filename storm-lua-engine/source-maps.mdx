@@ -1,66 +1,112 @@
 ---
-title: "非短縮ビルドのソースマップ"
-description: "複数ファイルをgame環境で実行し、停止位置とエラーを元ファイルへ戻す"
+title: "ソースマップと最適化理由"
+description: "v0.3.0のSDKで生成位置を元ソースへ戻し、最適化の理由・関連元を表示する"
 ---
 
 <Note>
-このページは公開版v0.2.0に対応します。ソース・型・WASMを同じ版で使用してください。0.2.0のマップは非短縮リンク結果のみを対象にし、最適化後のマップは返しません。
+v0.3.0のJavaScript・型定義・WASMを一組で使用します。SDKはマップの生成と検証までを提供し、エディタの表示・保存・実行位置との接続はホストが担当します。
 </Note>
 
-## 対応する経路
+## 生成する
 
-ゲーム向けの複数ファイルは、`compiler.build(project, {environment:"game", minify:false})`で一つのLuaにまとめ、その`code`をgame環境のVehicleへloadします。元ソースのrequireはビルドで解決するため、実行環境の`require`はnilのままです。
+`npm install @stormcat-works/storm-lua-engine@0.3.0`で導入します。`@stormcat-works/storm-lua-engine/compiler`の`loadCompiler`を初期化し、単一ソースは`compiler.minify(source, {sourceMap:true, sourceName:"controller.lua"})`へ渡します。
 
-成功時の`map`にはSource Map v3形式のJSON文字列が入り、元ファイルに相当する`source`名と原文の`sourcesContent`を含みます。`code`と`map`は必ず同じビルド結果の組で保持してください。後から生成Luaを編集したりminifyしたりすると、このマップは使えません。
+複数ファイルでは`compiler.build(project, {minify:true, sourceMap:true})`、LifeBoatのinclude-once方式では`compiler.buildLifeboat(project, {minify:true, sourceMap:true})`を使用します。元moduleへの位置合成はSDKが行います。map内のファイル名は表示名であり、SDKがディスクからそのファイルを開くわけではありません。
 
-`lib.util`というモジュールは`lib/util.lua`として表示されます。ambientの注入元も`sim/value.lua`のような名前で含まれます。SDKがその名前のファイルをディスクから開くわけではありません。
+コンパイラを初期化した後の基本操作は次のとおりです。
 
-## 元ファイルでブレークポイントを指定する
+```ts
+const result = compiler.minify(source, {
+  sourceMap: true,
+  sourceName: "controller.lua",
+});
+if (!result.ok || result.code === undefined || result.map === undefined) {
+  throw new Error(JSON.stringify(result.diagnostics));
+}
+const artifact = { code: result.code, map: result.map };
+const details = compiler.validateSourceMap(artifact.code, artifact.map);
+```
 
-ホストは次の順番で接続します。
+通常のminifyは明示指定時だけ詳細追跡を有効にします。非短縮`build({minify:false})`が標準mapを返す従来動作は維持し、`sourceMap:true`で詳細拡張も追加します。マップ有無で生成Luaの短縮結果は変わりません。
 
-1. 非短縮ビルドに成功し、`code`と`map`があることを確認します。
-2. `code`を`@mapped-program.lua`など一定のチャンク名でloadします。
-3. マップから、元のファイル名・行に**完全に一致する**生成行を取り出します。
-4. その生成行とチャンク名を`vm.setBreakpoints()`へ渡します。
-5. 停止したstackの生成位置を同じマップで逆引きし、元のファイル・行として表示します。
+マップはゲームへ貼り付けるLuaとは別の成果物です。`code`だけを実行し、`map`はホスト側へ保管します。8192文字制限のLuaへマップを埋め込む必要はありません。
 
-例えば、`lib/util.lua`の3行目が生成Luaの5行目なら、VMには`{source:"@mapped-program.lua", line:5}`を設定します。VMが返す5行目を、画面では元の3行目へ戻します。
+## 同じ組を検証・保存する
 
-一致する元行がない場合は、近い行へ勝手に移動せず「対応なし」として扱います。コメントや空行にマップがあっても、その行でLuaが実際に停止できるとは限りません。
+`map`はSource Map v3形式のJSON文字列です。標準の`sources`、`sourcesContent`、`names`、`mappings`に加え、`x_storm`へ詳細な由来・理由が入ります。
 
-## 実行できるNodeの例
+`validateSourceMap(code,map)`は、生成コード・原文snapshot・設定・mapの指紋、範囲・参照、標準mapと詳細情報の整合性を検証し、型付きの`OptimizationMap`を返します。読み込んだJSONに型アサーションを付けるだけで検証済みにしないでください。フィンガープリントは内容の整合性検査で、発行者を保証する署名ではありません。
 
-SDKリポジトリの`examples/consumer/source-map.mjs`は、通常のSource Map consumerである`@jridgewell/trace-mapping`を使います。SDKとこのパッケージを利用先のNodeプロジェクトへ導入し、同じファイルを実行してください。SDKの公開前は、対応する検証済みtarballを使用します。
+`details.producer.version`は生成したエンジン版、`details.schemaVersion`は独自形式の版です。Source Map本体の`version:3`とは別です。独自に配信していた旧`compiler.js`や`compiler_bg.wasm`も、npmパッケージと同じ版へ更新します。古いWorkerやService Workerのキャッシュも残さないでください。
 
-この例は次を実際に確認します。
+<Warning>
+マップは原文全文と、固定化したproperty等の設定を含みます。共有先を確認してください。生成後のLuaに別のminify、文字の追加、改行変換、前置きコードの挿入をすると元のマップとは組み合いません。SDKで再生成するか、別変換の正しいマップ合成が必要です。
+</Warning>
 
-- game設定のまま複数モジュールをビルドし、元ファイルの行で停止します。
-- 呼び出し元の位置を戻し、1ステップ進めてから再開します。
-- 出力6と、同じプログラムをresetした後の出力8を確認します。
-- 戻り値として公開された関数の実行エラーを、元のファイルの3行目へ戻します。
-- 短縮ビルドには古いリンクマップが付かないことを確認します。
+## 標準の位置を引く
 
-`eachMapping()`で元位置に完全一致する生成行を集め、`originalPositionFor()`で停止位置を逆引きする方法です。SDK自体のnpm実行時依存へSource Map consumerを追加する必要はありません。位置変換を行うホストだけが利用します。
+標準readerを利用するホストでは、`npm install @jridgewell/trace-mapping`などでconsumerを追加できます。これはホストの任意の依存で、SDK自体の実行時依存ではありません。
 
-[実行例のソース](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.2.0/examples/consumer/source-map.mjs)
+```ts
+import { TraceMap, originalPositionFor } from "@jridgewell/trace-mapping";
 
-## 対応精度と合成行
+const position = originalPositionFor(new TraceMap(artifact.map), {
+  line: generatedLine,     // 1始まり
+  column: generatedColumn, // 0始まりのUTF-16列
+});
+```
 
-現在のマップは**行単位・列0**です。元ソースをそのまま転写した範囲を対応付けます。リンカーが作る変数宣言や`do/end`などの補助行は、架空の原文へ割り当てず「対応なし」にします。
+生成位置はエディタなどから実際に取得した値を使います。`position.source`がnullなら、近い原文の行へ勝手に移動しません。標準readerの検索はマップにあるアンカーを使います。厳密なUnknown範囲・copy内部・複数の関連元・削除状況は、詳細情報も参照します。
 
-1行に複数の文や展開境界がある場合、列ごとに別の元位置を選べるマップではありません。非短縮のデバッグ用ソースでは、意味のある文を行で分けると位置を確認しやすくなります。LFとCRLF、およびコメント・文字列の日本語も、元ソース内容とともに扱います。
+## 理由と複数の関連元を表示する
 
-Source Mapの内部の行と列は0始まりですが、利用するJS consumerのAPIでは行が1始まり、列が0始まりの場合があります。SDKのbreakpointとstackの行も1始まりです。使用するconsumerの規約を確認し、二重に1を足さないでください。
+`details.mappings`は生成Lua上の非重複な範囲表です。`start`以上`end`未満の位置がその区間に属し、`origin`は`details.origins`のindexです。`origin:null`はUnknownであり、自動生成とは異なります。
 
-runtime errorを戻す際も、エラーがどの生成チャンクを指すか確認します。認識できないエラー形式やマップがない位置は、元ファイルの位置を推測せず、そのまま表示します。
+| 情報 | 読み方 |
+| --- | --- |
+| 主な元範囲 | origin.primaryのsource indexとstart/end |
+| 精度 | name / token / expression / statement / group |
+| 自動生成 | origin.kindがsynthetic。架空の元位置を持たない |
+| 最適化理由 | origin.reasonsをdetails.reasonsへ解決 |
+| 関連元 | origin.relatedをdetails.relationsへ解決。definition/callSite/argument等のroleを持つ |
+| インライン文脈 | mapping.inlineContextsをdetails.contextsへ解決 |
+| 親の式や文 | details.constructsから選択範囲を含む構文を確認 |
+| 削除・置換 | details.dispositionsの元範囲・reason・既知の置換元を確認 |
 
-## lint・前処理・最適化との違い
+理由は`code`と`operation`、記録された場合の`basis`と`facts`を持ちます。根拠がnullの場合、表示側がパス名から判断値を推測しません。
 
-`analyze(project)`は元のモジュールを直接解析し、モジュール名と位置を返します。通常のlintのために、先に一つのファイルへ結合する必要はありません。
+例えば、通常のtolerant設定で`2*3`が`6`になった場合、生成`6`は元の式全体と定数評価の理由へ対応します。関数のインライン化では、定義側のリテラルをそのまま示しながら、呼び出し元の文脈も取得できます。exact/tolerantやパス設定が異なると、選ばれる変換も異なります。
 
-ホストが解析前にコメントブロックを削除するなどの前処理を行う場合、その前処理の行対応は別途必要です。前処理後の位置を、編集画面の元テキストへ正しく戻してください。
+詳細の範囲は**UTF-8バイトの半開区間**、JavaScript文字列のindexや一般的なエディタ位置は**UTF-16**です。日本語・絵文字を含むコードで単純に同じ数字として扱わないでください。検証済みの`copied`区間は同一バイトのコピーなので内部位置を写せます。変換された式や広いgroupを文字単位で補間してはいけません。
 
-`build({minify:true})`は最適化後のマップを返しません。非短縮マップを付け替えるだけでは正しい位置へ戻せません。また、位置情報があることと、最適化で消えた変数や元の実行順序を復元できることは別です。
+## Nodeで実行する例
 
-[Compilerの操作](/storm-lua-engine/compiler) · [実行時requireと複数load](/storm-lua-engine/source-loading)
+[optimized-source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/examples/consumer/optimized-source-map.mjs)は、インストールしたSDKのWASMを読み、map生成・検証、標準位置、理由・関連元、インライン文脈、古いmapの拒否を確認します。
+
+`npm install @stormcat-works/storm-lua-engine@0.3.0 @jridgewell/trace-mapping`の後、同ファイルを保存して`node optimized-source-map.mjs`で実行できます。Node 22.18以降のESMを使用します。コードからLuaを実行する例ではありません。
+
+非短縮プロジェクトの実停止・ステップ・エラー位置を接続する例は[source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/examples/consumer/source-map.mjs)です。こちらは元moduleをビルドしてVMへ明示loadし、実行結果も確認します。
+
+## ブラウザーとWorker
+
+ブラウザーではコンパイラをホスト所有のmodule Workerへ置き、`/compiler-worker`の`serveCompiler`と`CompilerWorkerClient`で接続できます。`await client.minify(source,{sourceMap:true})`、`await client.validateSourceMap(code,map)`が対応します。Worker生成・終了と、同じ版のJS/WASMを配信する設定はホスト側です。
+
+コンパイルと理由JSON生成には追加の仕事量があります。`validateSourceMap`もコンパイラ側へ依頼できるため、UIスレッドで大きなマップを繰り返し検証する必要はありません。得られた検証結果を同じ成果物IDに紐付けて使用します。
+
+[Playground](/storm-lua-engine/playground)のSource Map例では、元コードと生成コードを双方向に選択し、理由・複数の候補・除去記録を確認できます。既存エディタへ自動的にUIが追加されるわけではありません。
+
+## 実行位置とブレークポイント
+
+VMの`load`には生成`code`と安定したチャンク名を渡します。ホストはそのチャンク名・実行世代と対応mapを保持し、元範囲から生成行の候補を取得して`vm.setBreakpoints()`へ設定します。停止したstack、ログ、エラーの生成位置を同じmapで元位置へ戻します。
+
+マップを作成しても、VMが返す行の精度が列や命令位置へ自動的に増えるわけではありません。**行しか分からない場合は、その生成行に対応する元位置を候補として示します。** 1行に圧縮されたLuaでcolumn=0を任意に指定し、それを実際の失敗位置として表示しないでください。
+
+削除された原文に実行箇所がない場合、近くの生成行へbreakpointを移しません。copy区間にコメントの位置があっても、そこが実行可能な停止箇所とは限りません。元変数の値・寿命、インライン化で消えた実frame、特定のloop反復や過去の実行状態は、この静的マップだけでは復元しません。
+
+## lintと前処理
+
+`analyze(project)`は元moduleを直接解析します。lintのためだけに先にminifyする必要はありません。SDKのリンクやLifeBoat開発区間の除去を使う場合、対応するビルド経路が元位置を管理します。
+
+ホストがSDKへ渡す前に独自の文字削除・連結などを行う場合、その前処理とエディタ原文の対応は別途必要です。前処理後の位置を元の編集バッファの位置とみなさないでください。
+
+[Compiler](/storm-lua-engine/compiler) · [API一覧](/storm-lua-engine/api-reference) · [Playground](/storm-lua-engine/playground)

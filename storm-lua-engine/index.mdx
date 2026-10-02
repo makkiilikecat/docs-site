@@ -6,7 +6,7 @@ description: "Stormworks向けLuaの実行・描画・解析・最適化を組�
 Storm Lua Engineは、Luaの実行、Vehicle/Addonのホスト境界、描画、デバッグ、解析・ビルド・最適化をアプリへ組み込むためのSDKです。必要な機能だけを明示的に初期化して使用します。
 
 <Warning>
-このガイドは公開版v0.2.0に対応します。0.1.0から更新する場合は[変更点](/storm-lua-engine/migration-0-2)を確認してください。旧版のコード・仕様はGitHubのv0.1.0タグから参照できます。
+このガイドはv0.3.0に対応します。最適化後の理由付きSource MapとPlaygroundのソース検査を利用できます。0.1.0から更新する場合は[変更点](/storm-lua-engine/migration-0-2)を確認してください。旧版のコード・仕様はGitHubのv0.1.0タグから参照できます。
 </Warning>
 
 ## 使い分け
@@ -49,3 +49,8 @@ Addonの`server`は、ホストが実装する同期関数群です。独自の�
 runtime、raster、compilerのWASMは別の実行単位です。ポインタやメモリを共有せず、生成Luaや所有した画素などのデータで接続します。
 
 詳しい手順は[導入](/storm-lua-engine/getting-started)、[Compiler](/storm-lua-engine/compiler)、[requireと複数チャンク](/storm-lua-engine/source-loading)、[API一覧](/storm-lua-engine/api-reference)、[0.2への変更](/storm-lua-engine/migration-0-2)を参照してください。実行可能な例と実装契約はSDKリポジトリで管理します。
+
+
+## 最適化後のソースマップ
+
+`compiler.minify(source,{sourceMap:true})`は生成Luaと対応するmapを返します。`validateSourceMap(code,map)`で検証し、標準の位置対応と、最適化理由・関連元・インライン文脈を表示できます。SDKの更新だけで既存エディタのUIが変わるわけではなく、表示・保存・実行位置はホストで接続します。[Source Mapガイド](/storm-lua-engine/source-maps)を参照してください。
