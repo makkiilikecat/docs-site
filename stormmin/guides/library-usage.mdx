@@ -21,10 +21,6 @@ console.log(result.code, result.size);
 - **ブラウザ**: `compile()` はメインスレッドをブロックしません。内部の coordinator が Web Worker 上に WASM を lazy-load し、候補の評価を coordinator 自身 + 複数の candidate Worker に分散します。`SharedArrayBuffer` やクロスオリジン分離は不要です。
 - **Node.js**: 同じ WASM を呼び出し元のプロセス内で同期的にロードし、候補の評価は Worker を使わず逐次実行します。
 
-<Warning>
-  Node.js 向けのエントリーポイントは `scanProperties()` と `passMetadata()` を実装していません。これらの関数はブラウザ環境からのみ利用できます。Node.js から呼び出すと未定義になります。`compile`/`compileProject`/`analyze`/`terminate` は両方の環境で利用できます。
-</Warning>
-
 <Note>
   ブラウザ環境では `Worker` コンストラクタが必須です。`Worker` を提供しない実行コンテキストで呼び出すと、`compile()` などのすべての呼び出しが Promise の reject で失敗します。
 </Note>
@@ -36,8 +32,8 @@ console.log(result.code, result.size);
 | `compile(source, options?)` | Node/ブラウザ | 単一ファイルの Lua を minify する |
 | `compileProject(project, options?)` | Node/ブラウザ | `require` で分割した複数モジュールをリンクし、必要なら minify する |
 | `analyze(project, options?)` | Node/ブラウザ | リンクと lint 相当の静的解析だけを行う（構文エラーでも `ok: true` のまま `diagnostics` で報告） |
-| `scanProperties(source)` | ブラウザのみ | ソース中の `property.get*` 呼び出しを検出する |
-| `passMetadata()` | ブラウザのみ | 全最適化 pass の ID と表示名の一覧を返す |
+| `scanProperties(source)` | Node/ブラウザ | ソース中の `property.get*` 呼び出しを検出する |
+| `passMetadata()` | Node/ブラウザ | 全最適化 pass の ID と表示名の一覧を返す |
 | `terminate()` | Node/ブラウザ | 内部の Worker を終了し、保留中の呼び出しを reject する（Node では no-op） |
 
 各関数のシグネチャとオプション/戻り値の型は [ライブラリ API リファレンス](/stormmin/reference/api) を参照してください。

@@ -19,10 +19,6 @@ passMetadata(): Promise<PassMetadataEntry[]>
 terminate(): void
 ```
 
-<Warning>
-  `scanProperties` と `passMetadata` は Node.js のエントリーポイントには実装されておらず、ブラウザ環境からのみ利用できます。
-</Warning>
-
 ## CompileOptions
 
 `compile()`/`compileProject()` に渡すオプションです。すべて省略可能です。
@@ -188,7 +184,7 @@ scanProperties(source: string): Promise<{
 passMetadata(): Promise<{ id: string; recordName: string }[]>
 ```
 
-`scanProperties` はソース中の `property.get*` 呼び出しを検出し、種類ごとのキー一覧と、動的（キーが定数でない）呼び出しの件数を返します。`passMetadata` は全 pass の ID と表示名のペアを返します（同じ pass ID が複数の表示名で登場することがあります）。どちらもブラウザ環境専用です。
+`scanProperties` はソース中の `property.get*` 呼び出しを検出し、種類ごとのキー一覧と、動的（キーが定数でない）呼び出しの件数を返します。`passMetadata` は全 pass の ID と表示名のペアを返します（同じ pass ID が複数の表示名で登場することがあります）。どちらも Node.js / ブラウザの両方で利用できます。
 
 ## terminate
 

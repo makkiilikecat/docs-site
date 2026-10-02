@@ -41,9 +41,6 @@ description: "よくある質問とエラーへの対処"
     `targetSize` オプション（CLI では `--options '{"targetSize":8192}'`、Web 版では「目標文字数」欄）を使ってください。目標サイズ以下の候補が得られた時点で探索を打ち切るため、最小化に比べて短時間で結果が得られます。詳しくは [目標サイズ探索 (OBJ-2)](/stormmin/guides/target-size) を参照してください。
   </Accordion>
 
-  <Accordion title="Node.js から scanProperties/passMetadata を呼んだら動きません">
-    既知の制限です。`scanProperties`/`passMetadata` はブラウザ環境のエントリーポイントにのみ実装されており、Node.js からは利用できません。`compile`/`compileProject`/`analyze`/`terminate` は両方の環境で利用できます。
-  </Accordion>
 
   <Accordion title="--optionsに存在しないpass IDを指定するとどうなりますか">
     未知・廃止済みのpass IDは`unknown-optimization-pass`として拒否します。falseを指定しても同じです。環境とホスト拡張の組み合わせが不正な場合は`invalid-environment`になります。他の任意JSONキーまで同じ検証がある、という意味ではありません。
