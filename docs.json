@@ -107,6 +107,7 @@
               "stormmin/guides/cli-usage",
               "stormmin/guides/library-usage",
               "stormmin/guides/ai-agent",
+              "stormmin/guides/source-map-viewer",
               "stormmin/guides/modules",
               "stormmin/guides/target-size"
             ]

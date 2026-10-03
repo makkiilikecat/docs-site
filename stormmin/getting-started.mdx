@@ -25,7 +25,9 @@ StormMin は 3 つの形態で利用できます。ビークルに貼る Lua を
       </Step>
     </Steps>
 
-    {/* TODO screenshot: Web 版のメイン画面（左に入力、右に出力、上部に容量バナー） */}
+    <Note>
+      原文と最適化後Luaの対応は、右側のSource Mapタブで「生成して調べる」を押して確認できます。検査中は生成時のsnapshotを読み取り専用で表示します。[Source Map Viewer](/stormmin/guides/source-map-viewer)を参照してください。
+    </Note>
 
     <Note>
       外部AI / Agentへ現在のLua・設定・結果を渡す場合は、ヘッダーの「AIに渡す」から Markdown / JSON Handoff を作成できます。利用できるdocs MCPやCLI/npm APIは [AI / Agent 連携](/stormmin/guides/ai-agent) を参照してください。
@@ -36,7 +38,7 @@ StormMin は 3 つの形態で利用できます。ビークルに貼る Lua を
     </Warning>
 
     <Note>
-      Web 版は単一ファイルの Lua コードのみに対応しています。`require` を使った複数モジュール構成を minify するには CLI かライブラリを使ってください。詳細は [require によるモジュール分割](/stormmin/guides/modules) を参照してください。
+      Web版での編集・最適化は単一ファイルのLuaが対象です。Source Map Viewerは、CLIやライブラリが作成した複数モジュールの生成物も読み込めます。`require` を使った複数モジュール構成を minify するには CLI かライブラリを使ってください。詳細は [require によるモジュール分割](/stormmin/guides/modules) を参照してください。
     </Note>
   </Tab>
   <Tab title="CLI">
