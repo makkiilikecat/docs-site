@@ -4,7 +4,7 @@ description: "gameとextended、bindings、Workerとデバッガ"
 ---
 
 <Note>
-このページはv0.3.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
+このページはv0.3.1に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
 ## 普通に実ゲーム向けLuaを試す
@@ -13,7 +13,7 @@ description: "gameとextended、bindings、Workerとデバッガ"
 
 ログの受信は`engine.createVehicle({onLog: record => console.log(record.source, record.bytes)})`です。テキストとして表示する場合だけ`luaText(record.bytes)`でデコードします。元のLua文字列はバイト列であり、不正UTF-8を黙って置換する契約ではありません。
 
-Addonでも同じ環境指定を使います。`engine.createAddon({server: {...}})`の`server`はホストが実装するAddon機能です。ゲームにない独自グローバルや標準関数の置換は、次のextendedで明示します。
+Addonでも同じ環境指定を使います。`engine.createAddon({server: {...}})`の`server`はホストが実装するAddon機能です。Addonのgame環境では`select`を提供しません。ゲームにない独自グローバルや標準関数の置換は、次のextendedで明示します。
 
 ## pcallやprintを使って開発する
 
@@ -55,4 +55,4 @@ watchは明示的にLua式を評価し、副作用を起こし得ます。表示
 
 `client.dispose()`は未完了の要求を拒否し、listenerを外します。CPU処理の中断や独立したメモリの破棄は、所有者であるホストが`worker.terminate()`で行います。runtime用とcompiler用のWorkerを分離すれば、コード変換と実行の寿命を独立に管理できます。
 
-詳細な判定と制約は[環境仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/docs/specs/environments.md)、コンパイラ操作は[Compiler guide](/storm-lua-engine/compiler)、通常実行は[利用側API](/storm-lua-engine/api-reference)を参照してください。
+詳細な判定と制約は[環境仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/docs/specs/environments.md)、コンパイラ操作は[Compiler guide](/storm-lua-engine/compiler)、通常実行は[利用側API](/storm-lua-engine/api-reference)を参照してください。

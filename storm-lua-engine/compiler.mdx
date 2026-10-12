@@ -4,7 +4,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 ---
 
 <Note>
-このページはv0.3.0に対応します。0.1.0にはCompiler SDKは含まれません。対応するソース・型定義・WASMを同じ版で使用してください。
+このページはv0.3.1に対応します。0.1.0にはCompiler SDKは含まれません。対応するソース・型定義・WASMを同じ版で使用してください。
 </Note>
 
 ## 操作の選択
@@ -14,6 +14,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 | `analyze` | 論理プロジェクトと診断設定 | 構造化された診断 |
 | `build` | 論理プロジェクトとビルド設定 | 単一Lua、標準map、短縮時は明示指定で理由付きmap |
 | `minify` | 単一Luaと最適化設定 | 短縮Lua、診断、適用条件、明示指定の理由付きmap |
+| `buildAddon` | Addonのinclude-onceプロジェクト | 非短縮Lua、元ソース入りmap、診断 |
 | `buildLifeboat` | include-once方式のプロジェクト | 単一Luaと明示指定の理由付きmap |
 | `validateSourceMap` | 生成Luaとmap文字列 | 検証済みOptimizationMap。不正なら例外 |
 | `scanProperties` | 単一Lua | 静的に名前が分かるproperty参照 |
@@ -22,7 +23,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 
 いずれもLuaを実行しません。ファイルを読み込んだり、VMを作ったり、ゲームのtickを進めたりする処理も含みません。`passMetadata()`の件数と登録パス総数は同じではありません。
 
-コンパイラの対象は現在Vehicleのみです。`target: "addon"`は解析・非短縮ビルドを含めて拒否します。Addonを実行できることとは別の対応範囲です。
+`minify`、通常の`build`、`analyze`の対象はVehicleです。`target: "addon"`は拒否します。Addonの非短縮リンクには専用の`buildAddon`を使用します。Addon最適化と全server APIの解析は提供しません。
 
 ## 論理プロジェクト
 
@@ -38,7 +39,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 
 これらは同期的で、ファイルシステムやLua VMを必要としません。通常のホストは上位APIを使い、明示的な候補処理が必要な場合だけ`storm-lua-minify`を参照します。ASTを直接作る低レベル利用者は、ノードIDと構造の契約を守る必要があります。
 
-[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
+[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
 
 ## TypeScriptから使用する
 
@@ -77,3 +78,12 @@ Nodeでは選択したWASMファイルをホストで読み、`wasmBinary`とし
 `general-expression-factoring`、`repeated-expression-factoring`、`scalar-vector-loop-synthesis`、`redundant-nil-fallback-elimination`は削除済みです。未知または廃止されたパスIDは、true/falseのどちらでも`unknown-optimization-pass`になります。数値モードによる正当な除外とは別の扱いです。
 
 実行可能なconsumerと適合性試験はSDKリポジトリで管理します。利用者向けの手順はこのサイトを正本とし、コード内部の実装仕様・テスト記録とは分離しています。
+
+
+## Addonの非短縮ビルド
+
+`compiler.buildAddon(project, {environment: "game", metadataTag: "studio"})`で、literalなincludeを一つの可読Luaへリンクします。Vehicleの最適化・property特殊化・8192文字目標は使用しません。`minify`や`targetSize`の指定はエラーです。返り値を捨てるinclude-once方式であり、通常の値返却型モジュール方式と区別します。
+
+`metadataTag`は、指定した先頭行を持つ先頭のlong commentだけを除去します。通常の`build`と`buildLifeboat`でも指定できます。元のbyte位置・改行を保持し、mapの`sourcesContent`には元metadataを含めます。ゲームへ提出するLuaだけの出力と、元ソース入りmapの共有は別々に判断してください。
+
+Addonのgame環境では`select`を提供しません。自分で定義した関数とnil/typeによる存在検査は維持し、開発用途には`extended`を明示できます。

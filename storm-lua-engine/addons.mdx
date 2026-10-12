@@ -4,7 +4,7 @@ description: "イベント・ホストserver・保存と再初期化"
 ---
 
 <Note>
-このページはv0.3.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
+このページはv0.3.1に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
 ## ホストとエンジンの担当
@@ -33,7 +33,7 @@ TSのホスト関数は`(...args: LuaValue[]) => readonly LuaValue[]`です。�
 
 ホスト関数は**同期**です。Promiseは拒否します。外部データの取得が必要なら、先に取得したsnapshotを同期的に返すか、HTTPの要求・返信APIを使用します。同じWASM moduleへの再入も禁止です。ホスト関数内でイベントが発生した場合は、関数の戻り値を返した後に、アプリ側のイベントキューからdispatchしてください。
 
-Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`と`VmError`を使うだけでよく、通常のホスト実装にmlua型は必要ありません。[Rust例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/conformance/examples/addon_host.rs)
+Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`と`VmError`を使うだけでよく、通常のホスト実装にmlua型は必要ありません。[Rust例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/conformance/examples/addon_host.rs)
 
 ## プロパティと保存・復元
 
@@ -49,10 +49,13 @@ Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`�
 
 通常の終了時に`onDestroy`が必要なら`destroy()`を実行し、必要な最終checkpointを取り、最後に`dispose()`します。disposeはスクリプトを勝手に実行しません。
 
-Luaやホスト関数の実行中に失敗したAddonは、新規VMまたは保存済みcheckpointからのreloadで復旧します。実行前から持っていたcheckpointを保持し、失敗した状態から必ず保存できるとは想定しないでください。ホストが既に実行したワールド変更や外部I/Oは自動ロールバックされません。
+通常のLuaエラーは呼び出し元へ返し、その後のonTickを停止します。同じVMの保存状態を保持し、onCreate・通常イベント・onDestroyを配送できます。loadがLuaエラーになった場合も既存checkpointを復元してstartへ進めます。命令数・メモリ制限やホスト境界の失敗では、新規VMまたは保存済みcheckpointからのreloadで復旧します。実行前から持っていたcheckpointも保持してください。ホストが既に実行したワールド変更や外部I/Oは自動ロールバックされません。
 
-完全な実行例は[Node利用例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/examples/consumer/node.mjs)。厳密な対応範囲・限界は[Addon仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/docs/specs/addon.md)にまとめています。
+完全な実行例は[Node利用例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/examples/consumer/node.mjs)。厳密な対応範囲・限界は[Addon仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/docs/specs/addon.md)にまとめています。
 
 ## 開発用の複数ファイル
 
 Addonの`load()`は初回の入口だけです。前置きや複数ファイルを必要とする開発実行は、extendedと`requireLoader`を指定して入口のLuaから読み込みます。別チャンクのままデバッグでき、reloadではキャッシュを再作成します。[requireと複数チャンク](/storm-lua-engine/source-loading)を参照してください。
+
+
+Addonのgame環境では`select`を提供しません。開発用途で必要な場合は`extended`を明示してください。

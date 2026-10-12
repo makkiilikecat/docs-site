@@ -1,15 +1,15 @@
 ---
 title: "ソースマップと最適化理由"
-description: "v0.3.0のSDKで生成位置を元ソースへ戻し、最適化の理由・関連元を表示する"
+description: "v0.3.1のSDKで生成位置を元ソースへ戻し、最適化の理由・関連元を表示する"
 ---
 
 <Note>
-v0.3.0のJavaScript・型定義・WASMを一組で使用します。SDKはマップの生成と検証までを提供し、エディタの表示・保存・実行位置との接続はホストが担当します。
+v0.3.1のJavaScript・型定義・WASMを一組で使用します。SDKはマップの生成と検証までを提供し、エディタの表示・保存・実行位置との接続はホストが担当します。
 </Note>
 
 ## 生成する
 
-`npm install @stormcat-works/storm-lua-engine@0.3.0`で導入します。`@stormcat-works/storm-lua-engine/compiler`の`loadCompiler`を初期化し、単一ソースは`compiler.minify(source, {sourceMap:true, sourceName:"controller.lua"})`へ渡します。
+`npm install @stormcat-works/storm-lua-engine@0.3.1`で導入します。`@stormcat-works/storm-lua-engine/compiler`の`loadCompiler`を初期化し、単一ソースは`compiler.minify(source, {sourceMap:true, sourceName:"controller.lua"})`へ渡します。
 
 複数ファイルでは`compiler.build(project, {minify:true, sourceMap:true})`、LifeBoatのinclude-once方式では`compiler.buildLifeboat(project, {minify:true, sourceMap:true})`を使用します。元moduleへの位置合成はSDKが行います。map内のファイル名は表示名であり、SDKがディスクからそのファイルを開くわけではありません。
 
@@ -81,11 +81,11 @@ const position = originalPositionFor(new TraceMap(artifact.map), {
 
 ## Nodeで実行する例
 
-[optimized-source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/examples/consumer/optimized-source-map.mjs)は、インストールしたSDKのWASMを読み、map生成・検証、標準位置、理由・関連元、インライン文脈、古いmapの拒否を確認します。
+[optimized-source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/examples/consumer/optimized-source-map.mjs)は、インストールしたSDKのWASMを読み、map生成・検証、標準位置、理由・関連元、インライン文脈、古いmapの拒否を確認します。
 
-`npm install @stormcat-works/storm-lua-engine@0.3.0 @jridgewell/trace-mapping`の後、同ファイルを保存して`node optimized-source-map.mjs`で実行できます。Node 22.18以降のESMを使用します。コードからLuaを実行する例ではありません。
+`npm install @stormcat-works/storm-lua-engine@0.3.1 @jridgewell/trace-mapping`の後、同ファイルを保存して`node optimized-source-map.mjs`で実行できます。Node 22.18以降のESMを使用します。コードからLuaを実行する例ではありません。
 
-非短縮プロジェクトの実停止・ステップ・エラー位置を接続する例は[source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.0/examples/consumer/source-map.mjs)です。こちらは元moduleをビルドしてVMへ明示loadし、実行結果も確認します。
+非短縮プロジェクトの実停止・ステップ・エラー位置を接続する例は[source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/examples/consumer/source-map.mjs)です。こちらは元moduleをビルドしてVMへ明示loadし、実行結果も確認します。
 
 ## ブラウザーとWorker
 
