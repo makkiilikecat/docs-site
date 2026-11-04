@@ -4,7 +4,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 ---
 
 <Note>
-このページはv0.3.1に対応します。0.1.0にはCompiler SDKは含まれません。対応するソース・型定義・WASMを同じ版で使用してください。
+このページはv0.4.0に対応します。0.1.0にはCompiler SDKは含まれません。対応するソース・型定義・WASMを同じ版で使用してください。
 </Note>
 
 ## 操作の選択
@@ -39,15 +39,15 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 
 これらは同期的で、ファイルシステムやLua VMを必要としません。通常のホストは上位APIを使い、明示的な候補処理が必要な場合だけ`storm-lua-minify`を参照します。ASTを直接作る低レベル利用者は、ノードIDと構造の契約を守る必要があります。
 
-[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
+[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
 
 ## TypeScriptから使用する
 
-`@stormcat-works/storm-lua-engine/compiler`から`loadCompiler`をimportし、`await loadCompiler()`でコンパイラだけを初期化します。この入口のimportだけではWASMをロードせず、初期化しても実行系・描画系のWASMは読み込みません。
+`@stormcat-works/storm-lua-engine/compiler`から`loadCompiler`をimportし、`await loadCompiler()`でコンパイラだけを初期化します。このサブパスをimportしただけではWASMをロードせず、初期化しても実行系・描画系のWASMは読み込みません。
 
 単一ソースには`compiler.minify(source, {target:"vehicle", numericMode:"exact", zeroCostNewlines:false})`を使います。複数ソースには、非短縮の`compiler.build(project, {minify:false})`、または`compiler.build(project, {minify:true, targetSize:8192})`を使います。編集中の診断は`compiler.analyze(project)`として分離します。
 
-Nodeでは選択したWASMファイルをホストで読み、`wasmBinary`として渡せます。ブラウザでは既定の同梱アセット、`wasmUrl`、またはbytesを指定します。`moduleUrl`は信頼した生成JSアダプタの場所です。`wasmUrl`と`wasmBinary`は同時に指定しません。
+Nodeでは選択したWASMファイルをホスト側で読み込み、`wasmBinary`として渡せます。ブラウザでは既定の同梱アセット、`wasmUrl`、またはbytesを指定します。`moduleUrl`は信頼した生成JSアダプタの場所です。`wasmUrl`と`wasmBinary`は同時に指定しません。
 
 初期化後の処理は同期的です。ブラウザではホストが作ったWorkerから呼び、UIやシミュレーションと分離します。`/compiler-worker`の`CompilerWorkerClient`と`serveCompiler`は通信を共有するためのアダプタです。Workerを自動で作らず、終了・中断はホストが決めます。[環境ガイド](/storm-lua-engine/environments)を参照してください。
 
@@ -55,13 +55,19 @@ Nodeでは選択したWASMファイルをホストで読み、`wasmBinary`とし
 
 コンパイル成功と目標文字数達成は別です。`ok`、`diagnostics`、`code`、`size`、`search.targetMet`を確認し、ホストが表示・保存・エクスポートの可否を判断します。文字数未達を構文エラーへ置き換えることはありません。
 
+v0.4.0では、Luaのロード時にエラーとなるソースを最適化で受理可能な形に変換せず、コンパイル時に拒否します。非vararg関数内の`...`など、旧版で受理されていた入力もエラーになる場合があります。再帰的な構文解析の深さが128段、構文木の深さが256段を超えるソースも、Native/WASMの両方で構文診断を返します。
+
 `numericMode: "exact"`と`"tolerant"`は数値変換の契約です。`mode:"safe"`を指定することとexactを指定することは同義ではありません。`assumptions`、`disabledPasses`、`propertyMode`などの結果も確認してください。
 
-非短縮ビルドは従来どおり標準Source Mapを返します。最適化後も`sourceMap:true`を指定すると、元ファイル・名前・トークン・式などへ戻るSource Map v3と`x_storm`の理由・関連元を取得できます。`code`と`map`を同じビルドの組で保存してください。手順は[Source Mapガイド](/storm-lua-engine/source-maps)にあります。
+v0.4.0では、数値リテラル・Luaのbyte文字列・評価順序・スコープなどで意味が変わる問題を修正しました。安全に適用できる条件に絞ったため、短縮後の文字数が以前より増える場合があります。
+
+非短縮ビルドは従来どおり標準Source Mapを返します。最適化後も`sourceMap:true`を指定すると、元ファイルや名前、トークン、式などに対応付けるSource Map v3と、`x_storm.schemaVersion: 2`の理由・関連元を取得できます。`code`と`map`を同じビルドの組で保存してください。手順は[Source Mapガイド](/storm-lua-engine/source-maps)にあります。
 
 通常のminifyは詳細mapを明示的に有効にした場合だけ由来情報を生成します。mapはゲームへ渡すLuaとは別のホスト側成果物で、Luaの文字数に加えません。消えた元変数値・フレーム・実列の復元を自動的に行うものではありません。
 
-`targetSize`未達の場合は、同じ意味論・パス設定の最大探索と同じ生成Luaを返します。目標なしの`searchMode:"fast"`は候補数を制限します。時間を指定して探索を打ち切るAPIではありません。
+`targetSize`を指定すると、目標内の候補が見つかった後も、実行速度を重視した候補の探索を続けます。目標なしの最高圧縮とは区別してください。
+
+`targetSize`未達の場合は、同じ意味論・パス設定で最大限探索した場合と同じ生成Luaを返します。目標なしの`searchMode:"fast"`は候補数を制限します。時間を指定して探索を打ち切るAPIではありません。
 
 ## 環境と動的参照
 
@@ -82,8 +88,10 @@ Nodeでは選択したWASMファイルをホストで読み、`wasmBinary`とし
 
 ## Addonの非短縮ビルド
 
-`compiler.buildAddon(project, {environment: "game", metadataTag: "studio"})`で、literalなincludeを一つの可読Luaへリンクします。Vehicleの最適化・property特殊化・8192文字目標は使用しません。`minify`や`targetSize`の指定はエラーです。返り値を捨てるinclude-once方式であり、通常の値返却型モジュール方式と区別します。
+`compiler.buildAddon(project, {environment: "game", metadataTag: "studio"})`で、literalなincludeを一つの読みやすいLuaへリンクします。Vehicleの最適化・property特殊化・8192文字目標は使用しません。`minify`や`targetSize`の指定はエラーです。返り値を捨てるinclude-once方式であり、通常の値返却型モジュール方式と区別します。
 
-`metadataTag`は、指定した先頭行を持つ先頭のlong commentだけを除去します。通常の`build`と`buildLifeboat`でも指定できます。元のbyte位置・改行を保持し、mapの`sourcesContent`には元metadataを含めます。ゲームへ提出するLuaだけの出力と、元ソース入りmapの共有は別々に判断してください。
+`metadataTag`は、指定した先頭行を持つ先頭のlong commentだけを除去します。通常の`build`と`buildLifeboat`でも指定できます。元のbyte位置・改行を保持し、mapの`sourcesContent`には元metadataを含めます。ゲームへ提出するLuaの出力と、元ソース入りmapを共有するかどうかは別々に判断してください。
+
+v0.4.0では、`metadataTag`・`minify:false`・`sourceMap:true`を同時に指定した通常ビルドまたはLifeBoatビルドで、map検証に失敗する不具合も修正しました。
 
 Addonのgame環境では`select`を提供しません。自分で定義した関数とnil/typeによる存在検査は維持し、開発用途には`extended`を明示できます。

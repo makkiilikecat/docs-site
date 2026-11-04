@@ -1,0 +1,48 @@
+---
+title: "0.4への移行"
+description: "Source Map schema 2への更新と、コンパイル時の不正入力拒否への対応"
+---
+
+v0.4.0では、Source Mapの拡張情報がschema 2へ変わり、ロード時に不正となるソースをコンパイル時に拒否します。旧版から更新するときは、マップの読み取り処理とコンパイル対象を確認してください。
+
+0.1.0から更新する場合は、[0.2での変更](/storm-lua-engine/migration-0-2)も確認してください。
+
+## SDKを同じ版へ揃える
+
+JavaScript・型定義・runtime/raster/compilerのWASMをv0.4.0へ揃えてください。RustのGit依存も`v0.4.0`を指定します。導入方法は[利用をはじめる](/storm-lua-engine/getting-started)を参照してください。
+
+独自配信のJSアダプタ、Workerから読み込むWASM、WorkerやService Workerのキャッシュも更新します。異なる版の生成側と読み取り側を組み合わせないでください。
+
+## Source Map schema 2への対応
+
+| 項目 | v0.4.0での扱い |
+| --- | --- |
+| 標準Source Map | 本体の`version`は引き続き3です |
+| Storm拡張 | `x_storm.schemaVersion`は2です |
+| 生成したSDK版 | `producer.version`に記録します。schemaの版とは別です |
+| schema 1のmap | v0.4.0のvalidatorは拒否します |
+| Playgroundの成果物JSON | 外側の`version:1`とmap内のschema 2は別の形式版です |
+
+schema 2では、mapの容量を減らすため、位置対応を`tokens`・`tokenNames`のトークン表に格納する場合があります。複数ソースやリネームしたトークン、通常の`origins`・`mappings`と混在する形式にも対応します。
+
+保存したJSONの`x_storm.mappings`だけを読んでいたホストは、`validateSourceMap(code,map)`の返却値を使うよう更新してください。validatorは保存形式の整合性を検証してトークン表を展開し、正規化した`OptimizationMap`を返します。返却された`mappings`・`origins`を利用でき、`tokens`・`tokenNames`は空になります。
+
+保存済みのschema 1のmapは、対応する元ソースと設定から再生成してください。生成した`code`と`map`は同じ組で保存し、実行するコードとも一致させます。schema番号だけを変更して移行したことにしないでください。
+
+標準readerによるSource Map v3の位置対応は引き続き利用できます。詳細は[ソースマップと最適化理由](/storm-lua-engine/source-maps)を参照してください。
+
+## コンパイル時の不正入力拒否
+
+非vararg関数内の`...`など、ロード時に不正となるソースはコンパイル時にエラーになります。旧版で最適化により不正な箇所が消え、受理されていた入力も対象です。診断に従って元ソースを修正してください。
+
+コンパイル結果の`ok`と`diagnostics`を確認し、失敗したビルドの`code`や`map`を使用しないでください。Lua実行時にだけエラーを処理する構成では、コンパイル時の失敗も扱うようにします。コンパイルの検査自体はLuaを実行しません。
+
+深すぎる構文はNative/WASMとも構文診断を返します。再帰的な構文解析の深さは128、構文木の深さは256を上限とし、平坦な文の並びにはこの深さ上限を適用しません。
+
+## 更新後の生成結果を確認する
+
+v0.4.0は、数値・byte文字列・型・スコープ・評価順序・API差し替えなどに関する最適化の正確性を修正しました。安全な適用条件に限定したことで、以前と同じ設定でも短縮後の文字数が増える場合があります。生成結果の`size`と`search.targetMet`を確認してください。
+
+`targetSize`を指定した探索は、目標内の候補が見つかった後も実行速度を重視した候補を調べます。目標を指定しない最高圧縮の使い方とは区別してください。
+
+通常/LifeBoatビルドで`metadataTag`・`minify:false`・`sourceMap:true`を同時に指定した際のmap検証の失敗も修正しました。詳細は[解析・ビルド・最適化](/storm-lua-engine/compiler)を参照してください。

@@ -1,15 +1,19 @@
 ---
 title: "ソースマップと最適化理由"
-description: "v0.3.1のSDKで生成位置を元ソースへ戻し、最適化の理由・関連元を表示する"
+description: "v0.4.0のSDKで生成位置を元ソースへ戻し、最適化の理由・関連元を表示する"
 ---
 
 <Note>
-v0.3.1のJavaScript・型定義・WASMを一組で使用します。SDKはマップの生成と検証までを提供し、エディタの表示・保存・実行位置との接続はホストが担当します。
+v0.4.0のJavaScript・型定義・WASMを一組で使用します。SDKはマップの生成と検証までを提供し、エディタの表示・保存・実行位置との接続はホストが担当します。
 </Note>
+
+<Warning>
+v0.4.0の拡張情報は`x_storm.schemaVersion: 2`です。schema 1とは互換性がなく、v0.4.0のvalidatorはschema 1を拒否します。生成側と読み取り側を同じ版へ更新してください。保存済みのschema 1のmapは、対応する元ソースと設定から再生成します。[0.4への移行](/storm-lua-engine/migration-0-4)も参照してください。
+</Warning>
 
 ## 生成する
 
-`npm install @stormcat-works/storm-lua-engine@0.3.1`で導入します。`@stormcat-works/storm-lua-engine/compiler`の`loadCompiler`を初期化し、単一ソースは`compiler.minify(source, {sourceMap:true, sourceName:"controller.lua"})`へ渡します。
+`npm install @stormcat-works/storm-lua-engine@0.4.0`で導入します。`@stormcat-works/storm-lua-engine/compiler`の`loadCompiler`を初期化し、単一ソースは`compiler.minify(source, {sourceMap:true, sourceName:"controller.lua"})`へ渡します。
 
 複数ファイルでは`compiler.build(project, {minify:true, sourceMap:true})`、LifeBoatのinclude-once方式では`compiler.buildLifeboat(project, {minify:true, sourceMap:true})`を使用します。元moduleへの位置合成はSDKが行います。map内のファイル名は表示名であり、SDKがディスクからそのファイルを開くわけではありません。
 
@@ -37,11 +41,17 @@ const details = compiler.validateSourceMap(artifact.code, artifact.map);
 
 `validateSourceMap(code,map)`は、生成コード・原文snapshot・設定・mapの指紋、範囲・参照、標準mapと詳細情報の整合性を検証し、型付きの`OptimizationMap`を返します。読み込んだJSONに型アサーションを付けるだけで検証済みにしないでください。フィンガープリントは内容の整合性検査で、発行者を保証する署名ではありません。
 
-`details.producer.version`は生成したエンジン版、`details.schemaVersion`は独自形式の版です。Source Map本体の`version:3`とは別です。独自に配信していた旧`compiler.js`や`compiler_bg.wasm`も、npmパッケージと同じ版へ更新します。古いWorkerやService Workerのキャッシュも残さないでください。
+`details.producer.version`は生成したエンジン版、`details.schemaVersion`は独自形式の版で、v0.4.0では2です。Source Map本体の`version:3`とは別です。独自に配信していた旧`compiler.js`や`compiler_bg.wasm`も、npmパッケージと同じ版へ更新します。古いWorkerやService Workerのキャッシュも残さないでください。
 
 <Warning>
-マップは原文全文と、固定化したproperty等の設定を含みます。共有先を確認してください。生成後のLuaに別のminify、文字の追加、改行変換、前置きコードの挿入をすると元のマップとは組み合いません。SDKで再生成するか、別変換の正しいマップ合成が必要です。
+マップは原文全文と、固定化したproperty等の設定を含みます。共有先を確認してください。生成後のLuaに別のminify、文字の追加、改行変換、前置きコードの挿入をすると、元のマップとは対応しなくなります。SDKで再生成するか、別変換の正しいマップ合成が必要です。
 </Warning>
+
+## schema 2の詳細情報を読む
+
+schema 2ではmapの容量を減らすため、字句短縮などの位置対応を`tokens`と`tokenNames`のトークン表へ格納する場合があります。複数ソースやリネームしたトークンにも対応し、通常の`origins`・`mappings`とトークン表が混在するmapもあります。JSONの`x_storm.mappings`だけを直接読んで全範囲が揃うと判断しないでください。
+
+`validateSourceMap`は保存形式の整合性を検証した後、トークン表を展開し、正規化した`OptimizationMap`を返します。表示には返却された`details.mappings`と`details.origins`を使用してください。返却値の`tokens`と`tokenNames`は空になります。標準Source Map v3の位置対応は、引き続き標準readerから利用できます。
 
 ## 標準の位置を引く
 
@@ -77,23 +87,23 @@ const position = originalPositionFor(new TraceMap(artifact.map), {
 
 例えば、通常のtolerant設定で`2*3`が`6`になった場合、生成`6`は元の式全体と定数評価の理由へ対応します。関数のインライン化では、定義側のリテラルをそのまま示しながら、呼び出し元の文脈も取得できます。exact/tolerantやパス設定が異なると、選ばれる変換も異なります。
 
-詳細の範囲は**UTF-8バイトの半開区間**、JavaScript文字列のindexや一般的なエディタ位置は**UTF-16**です。日本語・絵文字を含むコードで単純に同じ数字として扱わないでください。検証済みの`copied`区間は同一バイトのコピーなので内部位置を写せます。変換された式や広いgroupを文字単位で補間してはいけません。
+詳細情報が示す範囲は**UTF-8バイトの半開区間**、JavaScript文字列のindexや一般的なエディタ位置は**UTF-16**です。日本語・絵文字を含むコードで単純に同じ数値として扱わないでください。検証済みの`copied`区間は同一バイトのコピーなので内部位置を対応させられます。変換された式や広いgroupを文字単位で補間してはいけません。
 
 ## Nodeで実行する例
 
-[optimized-source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/examples/consumer/optimized-source-map.mjs)は、インストールしたSDKのWASMを読み、map生成・検証、標準位置、理由・関連元、インライン文脈、古いmapの拒否を確認します。
+[optimized-source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/examples/consumer/optimized-source-map.mjs)は、インストールしたSDKのWASMを読み、map生成・検証、標準位置、理由・関連元、インライン文脈、古いmapの拒否を確認します。
 
-`npm install @stormcat-works/storm-lua-engine@0.3.1 @jridgewell/trace-mapping`の後、同ファイルを保存して`node optimized-source-map.mjs`で実行できます。Node 22.18以降のESMを使用します。コードからLuaを実行する例ではありません。
+`npm install @stormcat-works/storm-lua-engine@0.4.0 @jridgewell/trace-mapping`の後、同ファイルを保存して`node optimized-source-map.mjs`で実行できます。Node 22.18以降のESMを使用します。コードからLuaを実行する例ではありません。
 
-非短縮プロジェクトの実停止・ステップ・エラー位置を接続する例は[source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.3.1/examples/consumer/source-map.mjs)です。こちらは元moduleをビルドしてVMへ明示loadし、実行結果も確認します。
+非短縮プロジェクトの実停止・ステップ・エラー位置を接続する例は[source-map.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/examples/consumer/source-map.mjs)です。こちらは元moduleをビルドしてVMへ明示loadし、実行結果も確認します。
 
 ## ブラウザーとWorker
 
 ブラウザーではコンパイラをホスト所有のmodule Workerへ置き、`/compiler-worker`の`serveCompiler`と`CompilerWorkerClient`で接続できます。`await client.minify(source,{sourceMap:true})`、`await client.validateSourceMap(code,map)`が対応します。Worker生成・終了と、同じ版のJS/WASMを配信する設定はホスト側です。
 
-コンパイルと理由JSON生成には追加の仕事量があります。`validateSourceMap`もコンパイラ側へ依頼できるため、UIスレッドで大きなマップを繰り返し検証する必要はありません。得られた検証結果を同じ成果物IDに紐付けて使用します。
+コンパイルと理由JSONの生成には追加の処理負荷がかかります。`validateSourceMap`もコンパイラ側へ依頼できるため、UIスレッドで大きなマップを繰り返し検証する必要はありません。得られた検証結果を同じ成果物IDに紐付けて使用します。
 
-[Playground](/storm-lua-engine/playground)のSource Map例では、元コードと生成コードを双方向に選択し、理由・複数の候補・除去記録を確認できます。既存エディタへ自動的にUIが追加されるわけではありません。
+[Playground](/storm-lua-engine/playground)のSource Map例では、元コードと生成コードを双方向に選択し、理由・複数の候補・除去記録を確認できます。既存エディタにUIが自動で追加されるわけではありません。
 
 ## 実行位置とブレークポイント
 

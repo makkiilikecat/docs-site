@@ -4,10 +4,10 @@ sidebarTitle: "Playground"
 description: "CLIとWebでSDKの機能・結果・失敗を直接確かめる"
 ---
 
-Playgroundは、SDKの全体を小さな確認例から試すためのアプリです。Luaの実行、描画、解析・ビルド・短縮、デバッガ、Addon、値と保存、ホスト関数の接続を扱います。完全なIDEやゲーム世界のシミュレータではありません。
+Playgroundは、SDK全体を小さな確認例で試すためのアプリです。Luaの実行、描画、解析・ビルド・短縮、デバッガ、Addon、値と保存、ホスト関数の接続を扱います。完全なIDEやゲーム世界のシミュレータではありません。
 
 <Note>
-[Playgroundを開く](https://www.makkii.jp/tools/stormworks/storm-lua-engine/)。SDK v0.3.1の機能をブラウザ内で確認できます。ソースはサーバーへ送信しません。
+[Playgroundを開く](https://www.makkii.jp/tools/stormworks/storm-lua-engine/)。SDK v0.4.0の機能をブラウザ内で確認できます。ソースはサーバーへ送信しません。
 </Note>
 
 ## Webの操作
@@ -40,6 +40,8 @@ Playgroundは、SDKの全体を小さな確認例から試すためのアプリ�
 
 コード、map、その組の成果物JSONを保存できます。取り込んだ成果物はSDKで検証し、異なるコードのmapや破損データを拒否します。マップには原文全文や固定化された設定を含むため、共有するファイルの内容を確認してください。
 
+v0.4.0で生成するmapの拡張情報はschema 2です。schema 1のmapは読み込めないため、旧版で保存した生成物は元ソースと設定から再生成してください。成果物JSONの`version:1`とmap内の`x_storm.schemaVersion:2`は別の形式版です。[0.4への移行](/storm-lua-engine/migration-0-4)も参照してください。
+
 ## 操作列を変更する
 
 操作列の`{"$source":true}`はソース欄、`{"$environment":true}`は環境の選択を参照します。操作に`as`を付けて結果へ名前を付け、`{"$ref":"compiled.code"}`で後続のloadへ渡せます。公開APIを試す薄い接続処理であり、独自のLua最適化器や描画式を含みません。
@@ -56,4 +58,4 @@ EngineリポジトリでSDKをビルドし、appの依存を導入した後、`n
 
 旧localStorage形式の端末保存は自動変換せず、元データの救出と明示的なimportを案内します。入力project JSON v1は継続して読めます。不正なJSONや未対応versionをimportしても、現在の入力を破棄しません。古いAddon Lab形式は自動変換せず、未対応として返します。保存に失敗した場合は警告を表示し、JSONへの書き出しを利用できます。秘密情報や実サービスの認証情報を保存する機能はありません。
 
-[SDKの使い分け](/storm-lua-engine/index)と[Storm Min](/stormmin/index)も参照してください。
+[SDKの使い分け](/storm-lua-engine/index)と[StormMin](/stormmin/index)も参照してください。
