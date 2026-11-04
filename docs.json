@@ -156,6 +156,7 @@
             "group": "リファレンス",
             "pages": [
               "storm-lua-engine/api-reference",
+              "storm-lua-engine/migration-0-4",
               "storm-lua-engine/migration-0-2"
             ]
           }
