@@ -4,7 +4,7 @@ description: "SDKとホストの境界、要求の配送と失敗処理"
 ---
 
 <Note>
-このページはv0.3.1に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
+このページはv0.4.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
 ## `drawMap()`を実装する
@@ -13,7 +13,7 @@ TypeScriptのビークルには`createVehicle({ mapProvider })`で関数を渡�
 
 返す値は**同期的な`Uint8Array`で、長さは正確に`width × height × 4`**です。RGBA画像は描画命令列中の`drawMap`の位置でフレームを置換し、その後の図形・文字は通常どおり上に描かれます。地図を描いても現在の`screen.setColor`は変わりません。複数の`drawMap`や、デバッガによる途中停止・再開でも命令順を保持します。
 
-この契約はホストの地形データを接続するためのものです。エンジンは地形・タイル・ゲームの既定paletteを所有せず、地図画像自体の実ゲーム互換性を保証しません。線・矩形・円・文字はこのリポジトリの描画仕様と採用済みケースに従います。
+この契約はホストの地形データを接続するためのものです。エンジンは地形・タイル・ゲームの既定paletteを所有せず、地図画像自体の実ゲーム互換性を保証しません。線・矩形・円・文字はSDKの[描画仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/docs/specs/screen.md)に従います。
 
 Rustでは`ScreenRaster::set_map_provider(Some(Rc::new(provider)))`を使用します。独自GPUなどへ描く場合は`ScreenSink`で`DrawCommand::Map`と`MapColor`を直接処理することもできます。microcontrollerクレートは地図やCPUラスタライザに依存しません。
 
@@ -21,15 +21,17 @@ TSの描画専用`/raster`モジュールは、現在はJSホストコールバ�
 
 ### 失敗と寿命
 
-プロバイダーが無い場合はUnsupported、例外・Promise・長さ不一致は明示的な失敗です。架空の地形へのfallbackはありません。途中まで描かれたフレームが残ることはありますが、失敗したdrawを完成扱いにしません。
+プロバイダーが無い場合はUnsupported、例外・Promise・長さ不一致は明示的な失敗です。架空の地形へのfallbackはありません。途中まで描かれたフレームが残ることはありますが、失敗したdrawを完了扱いにしません。
 
 画像はJSからWASMへコピーします。この境界はゼロコピーではありません。頻繁に使用する地形データはホストでキャッシュし、ネットワーク取得は描画の前に済ませてください。callback中の同一WASMへの再入、`vehicle.io`の新規借用、保持済み生ビューへの書き込みは禁止です。
 
 ## `print()`と`debug.log()`を出力する
 
-最も簡単な入口は`createVehicle({ onLog })`／`createAddon({ onLog })`です。`onLog(record)`はLuaの呼び出しが戻った後に実行され、正常終了だけでなく、デバッグ停止・Lua実行エラー前のログも受け取れます。Lua実行中にJSのUI関数へ再入する方式ではありません。
+ログの自動配送には`createVehicle({ onLog })`／`createAddon({ onLog })`を使用します。`onLog(record)`はLuaの呼び出しが戻った後に実行され、正常終了だけでなく、デバッグ停止・Lua実行エラー前のログも受け取れます。Lua実行中にJSのUI関数へ再入する方式ではありません。
 
 recordには`source: 'print' | 'debug.log'`と`bytes: Uint8Array`があります。行末改行は含まず、複数のLua引数はタブ区切りです。テーブルなどの非スカラーは型名を表示し、ログ整形のために任意のユーザーmetamethodを実行しません。
+
+取得できた場合は`record.location`にチャンク名と1始まりの行番号が入ります。位置を取得できない場合は省略します。配送後のスタックから位置を推測したり、列が分からないログへ列番号を補ったりしないでください。生成Luaのログを元ファイルへ戻す場合は、同じ実行世代のcode/mapを使用します。[Source Mapガイド](/storm-lua-engine/source-maps)を参照してください。
 
 例えば`onLog: record => { console.log(record.source, new TextDecoder().decode(record.bytes)); }`とすればブラウザのコンソールへ接続できます。これは表示用の例です。厳密なUTF-8検査には`new TextDecoder('utf-8', { fatal: true })`を使用し、生データを保存するならbytesをそのまま扱います。
 
@@ -37,7 +39,7 @@ Vehicle/Addonとも`debug.log`はgame環境から利用できます。`onLog`は
 
 自動配送が不要なら`drainLogRecords()`で構造化ログ、`drainLogs()`でbytesだけを取得できます。`flushLogs(handler)`は蓄積済みログを明示配送します。Rustでは`drain_log_records()`をアプリのloggerやIDEへ渡してください。
 
-ログは1行16KiB、最大128行／合計64KiBに制限します。drainせず上限を超えると実行エラーです。`onLog`は同期で軽い処理にし、ファイル書き込み等はアプリ側のキューへ渡してください。配送先で例外が出た場合、drainした全行を1回ずつ試みたうえで失敗を通知します。Luaのエラーも同時に起きていた場合は両方を`AggregateError`で保持します。
+ログは本文1行16KiB、最大128件に制限します。未配送の本文とチャンク名の合計は64KiBまでです。drainせず上限を超えると実行エラーです。`onLog`は同期で軽い処理にし、ファイル書き込み等はアプリ側のキューへ渡してください。配送先で例外が出た場合、drainした全行の配送を1回ずつ試みたうえで、失敗を通知します。Luaのエラーも同時に起きていた場合は両方を`AggregateError`で保持します。
 
 ## HTTPを実装する
 
