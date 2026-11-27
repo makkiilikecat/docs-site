@@ -1,0 +1,64 @@
+---
+title: "Component Modの組み込み"
+description: "第3のプロファイル、ライフサイクル、ホスト提供ドメイン"
+---
+
+<Note>
+このページはv0.5.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
+</Note>
+
+## ホストとエンジンの担当
+
+Component Modはコンポーネント定義に埋め込まれたLuaを実行する第3のプロファイルです。VehicleやAddonとは別のスクリプトクラスとして扱います。
+
+エンジンはLua状態、順序付きライフサイクル、エラーステータスを担当します。コンポーネントの物理・流体・描画などの実処理は、ホストがドメイン単位のプロバイダとして提供します。スクリプトの読み込み先を決めるのもホストです。
+
+## ライフサイクル
+
+`createComponent(options)` → `load(source, name)` → `parse()` → `addToSimulation()` → `tick(gameTicks)`／`render()` → `removeFromSimulation()` → `dispose()`。
+
+各段階は`onParse`、`onAddToSimulation`、`onTick`、`onRender`、`onRemoveFromSimulation`の順に対応します。順序の外れた呼び出しはエラーになります。コールバックが未定義、または関数でない場合は「不在」として扱い、ステータスは変わりません。`tick`の`gameTicks`は整数で渡し、0も拒否しません。
+
+## Lua環境とAPI
+
+APIは64関数です。`matrix`の13関数（Addonの12関数に`scale`を加えた集合）と`debug.log`はエンジンが実装します。残りの50関数（`component.*`の47関数と`parser.*`の3関数）はホスト提供で、提供されたドメインの関数だけが登録されます。未提供の関数を、成功するだけの代用品で埋めることはしません。
+
+ホスト提供ドメインは11種です。LogicSlots、TorqueSlots、FluidSlots、ElectricSlots、Sfx、FluidContents、Heater、Render、Physics、EnvironmentQuery、ParseHandlersに分かれます。TypeScriptでは`providers`へドメイン名（`logic`、`torque`、`fluid`、`electric`、`sfx`、`fluidContents`、`heater`、`render`、`physics`、`environment`、`parse`）で指定します。
+
+公開される名前空間は`component`、`parser`、`matrix`、`debug.log`です。base関数は`ipairs`、`next`、`pairs`、`tonumber`、`tostring`、`type`の6関数で、`math`／`table`／`string`は完全版（`string.dump`を含む）です。`server`、`property`、`input`、`output`、`screen`、`select`は登録しません。`print`はextended環境でのみ使えます。
+
+## 引数の意味論
+
+引数の個数が合わない呼び出しは、Luaエラー（`Wrong number of args`）になります。唯一の例外は`matrix.identity`で、実ゲームの実装に個数検査がないため、余分な引数を渡してもエラーになりません。
+
+値の型は無言で変換されます。整数・数値は変換できない場合に0、真偽値は`false`と`nil`だけが偽です。tableが必須の引数（matrixとComposite）だけは、型が合わないとLuaエラーになります。
+
+`debug.log`はComponent系統だけの例外です。引数の個数が合わない場合はエラーになりますが、型は無言で、文字列と数値以外は記録されません。上限・件数の制限はありません。
+
+## エラーステータス
+
+通常のLuaエラーは呼び出し元へ返し、実ゲームのエラーステータスを記録します。`onTick`の失敗は2、ロードの失敗は3、それ以外のコールバックの失敗は5です。実行時間制限の超過は`onTick`の実行中に起きたものだけを数値を主張しない`TimedOut`として表し、他の段階ではその段階の失敗ステータスで表します。
+
+ステータスの自動復帰はありません。失敗したインスタンスはホストが作り直します。tickだけがステータスゲートを持ち、ステータスが正常でない間は`onTick`を実行せずmissingを返します。`render`と`removeFromSimulation`にゲートはなく、tick失敗後も`onRemoveFromSimulation`は配送されます。命令数・メモリ制限やホスト境界の失敗はVMを失敗状態にし、そのインスタンスは再利用しません。
+
+TypeScriptの`status()`は`{status, code}`を返します。`code`がnullになるのは`timedOut`のときだけです。
+
+## スクリプトの読み込み
+
+スクリプトの読み込みはホスト契約です。エンジンに新しい読み込みAPIは作りません。ホストはコンポーネント定義XMLから`lua_filename`属性を抽出し、パッケージ内アセット、実ファイルの順で解決して、得たバイト列を属性値そのままのチャンク名で`load`へ渡します。チャンク名はエラーの発生位置にそのまま現れます。コンポーネント1個につき、Componentインスタンスを1個作ります。
+
+TypeScriptの`createComponent`では、`requireLoader`は無視せずに明示的に拒否します。
+
+## parser
+
+`parser.parseBool`、`parser.parseNumber`、`parser.parseString`は、ホストのparseハンドラ越しに定義データを読み書きします。読みか書きかはホスト側のパース状態が決めます。返値は（値、成功bool）の2個で、パース期間外は`false`が1個だけ返ります。
+
+## HTTPと継続
+
+Component ModにはHTTP APIがありません。`drainHttpRequests()`は常に空を返し、`httpReply`と`cancelHttp`はUnsupportedで失敗します。プロファイル単位の継続もありません。VM共通のスナップショットは[スナップショットと継続](/storm-lua-engine/snapshot-continuation)を参照してください。
+
+## ビルド
+
+配布用に一つのLuaへまとめる場合は、Compiler SDKの`buildComponent`で非短縮のinclude-onceリンクを使用できます。最適化（短縮化）は行いません。手順は[Compiler](/storm-lua-engine/compiler)を参照してください。
+
+生成カタログには`COMPONENT_API_CATALOG`が含まれます。厳密な対応範囲・限界は[Component仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/docs/specs/component.md)にまとめています。

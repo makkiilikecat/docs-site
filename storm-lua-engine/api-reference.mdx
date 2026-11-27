@@ -4,10 +4,10 @@ description: "Vehicle・Addon・描画・デバッグ・保存の公開API"
 ---
 
 <Note>
-このページはv0.4.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
+このページはv0.5.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
-この一覧はエンジンを利用するアプリケーション向けです。Luaスクリプト内で見えるゲームAPIについては、モード別の`VEHICLE_API_CATALOG`／`ADDON_API_CATALOG`と[仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/docs/specs/api.md)を参照してください。
+この一覧はエンジンを利用するアプリケーション向けです。Luaスクリプト内で見えるゲームAPIについては、モード別の`VEHICLE_API_CATALOG`／`ADDON_API_CATALOG`／`COMPONENT_API_CATALOG`と[仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/docs/specs/api.md)を参照してください。
 
 ## 初期化と生成
 
@@ -17,25 +17,28 @@ description: "Vehicle・Addon・描画・デバッグ・保存の公開API"
 | `fromEmscripten(module)` | 初期化済みmoduleを包む。同じmoduleは同じengineを返す |
 | `engine.createVehicle(options?)` | `VehicleVm`。property、ログ、mapProviderをsource実行前に設定 |
 | `engine.createAddon(options?)` | `AddonVm`。newWorld、savedata、メニュープロパティ、server関数、ログを設定 |
+| `engine.createComponent(options?)` | `ComponentVm`。providersでホスト提供ドメインを設定。requireLoaderは拒否 |
 | `/raster`の`loadRaster(options?)` | Luaなしの描画用engine。`createRaster(width,height)`で描画先を作成 |
 
-共通生成設定は`environment`（既定`game`）、`bindings`（extended専用のホスト値・同期関数）、`requireLoader`（extended専用のソース供給）、`instructionBudget`（既定1,000,000）、`memoryBytes`（既定8MiB）、`devLogs`、`onLog`です。WASM adapterのLuaメモリ設定は最大256MiB。予算はコールバック単位で、ホスト関数の壁時計実行時間を中断する機構ではありません。
+共通生成設定は`environment`（既定`game`）、`bindings`（extended専用のホスト値・同期関数）、`requireLoader`（extended専用のソース供給。Componentでは拒否）、`instructionBudget`、`memoryBytes`、`devLogs`、`onLog`です。WASM adapterのLuaメモリ設定は最大256MiB。
 
-## 両モード共通
+実行制限の既定はRustとTypeScriptで異なります。TypeScript／WASMでは、`instructionBudget`（既定1,000,000）と`memoryBytes`（既定8MiB）が従来どおり既定で適用されます。Rustの`ExecutionLimits`では既定で有効なのは壁時計1001msの時間制限だけで、命令数・Luaメモリ・ソース長の上限は`Option`になり、ホストが明示した場合だけ効きます。壁時計の超過は実ゲームと同じ文面のLuaエラーになり、VMは失敗状態になりません。命令予算はコールバック単位で、ホスト関数の実行時間を中断する機構ではありません。
+
+## モード共通
 
 | メソッド | 契約 |
 |---|---|
-| `load(source, name?)` | テキストLuaを実行。Vehicleは別チャンクとして追加し、Addonは初回の入口のみ。結果はcompleted/suspended/missing |
+| `load(source, name?)` | テキストLuaを実行。Vehicleは別チャンクとして追加し、AddonとComponentは初回の入口のみ。結果はcompleted/suspended/missing |
 | `enableLogs()` | extended専用。gameでは拒否。debug.logは両環境で常時使用可能 |
 | `drainLogRecords()` | sourceとbytes、取得できた場合のlocationを持つ所有ログを取り出す |
 | `drainLogs()` | bytesのみを取り出す |
 | `flushLogs(handler)` | 明示配送し、件数を返す |
-| `drainHttpRequests()` | 未配送の要求を取得。未返信管理は残る |
-| `httpReply(token, reply)` | string/bytesをLuaへ配送。busyならtokenを消費しない |
-| `cancelHttp(token)` | 実際に失敗した通信を取り消す。Luaへ偽返信しない |
+| `drainHttpRequests()` | 未配送の要求を取得。未返信管理は残る。ComponentにはHTTP APIがなく、常に空を返す |
+| `httpReply(token, reply)` | string/bytesをLuaへ配送。busyならtokenを消費しない。ComponentではUnsupported |
+| `cancelHttp(token)` | 実際に失敗した通信を取り消す。Luaへ偽返信しない。ComponentではUnsupported |
 | `dispose()` | 破棄。同じ高レベルobjectへの再度のdisposeは何もしない |
 
-`mode`は`'vehicle'`または`'addon'`の読み取り専用識別子です。生のABIには別途世代付きhandleの検査があり、不正ハンドルやraw double-disposeはエラーになります。
+`mode`は`'vehicle'`、`'addon'`、`'component'`の読み取り専用識別子です。生のABIには別途世代付きhandleの検査があり、不正ハンドルやraw double-disposeはエラーになります。
 
 ## ビークル専用
 
@@ -46,6 +49,8 @@ description: "Vehicle・Addon・描画・デバッグ・保存の公開API"
 | `draw(width,height)` | onDrawを1回実行して順番に描画。複数画面でもLua呼び出しを省略しない |
 | `frame()` | 世代検査付き`FrameLease` |
 | `setProperties(properties)` | idle時に全置き換え。既存Lua変数のキャッシュは変更しない |
+| `setProperty(label, value)` | idle時に1件だけ設定。`null`や`undefined`を渡しても削除にはならず、`TypeError`になる |
+| `removeProperty(label)` | 1件だけ削除し、その項目があったかどうかを返す |
 | `reset()` | 現在のプロパティで完了済みloadの全チャンクを順に再実行。requireキャッシュを再作成し、HTTP/debugの古い識別子は失効 |
 
 `frame.pixels`は借用、`frame.copy()`は所有コピー。width／height／strideBytes／formatを確認できます。frameのraw形式は`game-rgba8`です。`/canvas`は表示用adapterであり、このraw契約を書き換えません。
@@ -55,7 +60,7 @@ description: "Vehicle・Addon・描画・デバッグ・保存の公開API"
 | API | 契約 |
 |---|---|
 | `start()` | load完了後にonCreate(newWorld)を1回実行 |
-| `tick(gameTicks = 1)` | onTick(gameTicks)を1回実行。正のu32 |
+| `tick(gameTicks = 1)` | `onTick(gameTicks)`を1回実行。符号付き整数を受け付け、0以下でも拒否しない |
 | `dispatch(callback,args?)` | `AddonEvent`のイベントをlossless引数列で配送 |
 | `savedata()` | idleのg_savedataを所有テーブルとして取得 |
 | `reload(checkpoint)` | 同じsourceを既存ワールドとして再初期化。別途startが必要 |
@@ -64,11 +69,26 @@ description: "Vehicle・Addon・描画・デバッグ・保存の公開API"
 
 Addonには`io`、`draw`、`frame`、`setProperties`はありません。vehicleの操作をAddon handleへ渡してもraw ABIで拒否します。セーブ全体のUI設定、sourceファイル、hostのワールド状態は、`g_savedata`とは別にアプリ側で保存してください。
 
+## Component専用
+
+| API | 契約 |
+|---|---|
+| `parse()` | ロード済みスクリプトの`onParse`を1回実行。定義データの読み書き期間 |
+| `addToSimulation()` | `onAddToSimulation`を1回実行 |
+| `tick(gameTicks = 1)` | `onTick(gameTicks)`を1回実行。符号なし整数で、0も受け付ける。エラーステータスが正常でない間は実行せずmissingを返す |
+| `render()` | `onRender`を1回実行。ステータスによるゲートはない |
+| `removeFromSimulation()` | `onRemoveFromSimulation`を1回実行。tick失敗後でも配送する |
+| `status()` | 現在のエラーステータスを`{status, code}`で返す。tickのtimeout（`timedOut`）のときだけ`code`がnull |
+
+Componentには`io`、`draw`、`frame`、`setProperties`、HTTP API、プロファイル単位の継続はありません。ライフサイクルとホスト提供ドメインは[Component Modの組み込み](/storm-lua-engine/component)を参照してください。
+
 ## デバッガ
 
-両モードで`setBreakpoints(points)`、`resume(mode?)`、`stack()`、`locals(level?)`、`upvalues(level?)`、`expandTable(handle,start?,limit?)`、`evaluateWatch(expression,level?)`を提供します。標準配布のruntimeにはdebug featureを含めます。
+全モードで`setBreakpoints(points)`、`resume(mode?)`、`stack()`、`locals(level?)`、`upvalues(level?)`、`expandTable(handle,start?,limit?)`、`evaluateWatch(expression,level?)`を提供します。標準配布のruntimeにはdebug featureを含めます。
 
-modeはcontinue／into／over／outです。watchの評価は副作用を伴う明示的な操作です。localsとtableのraw検査ではユーザーmetamethodを実行しません。デバッグtable handleはVMと停止世代に紐づき、resume／watch／reload後に使い回せません。[詳細](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/docs/specs/debugger.md)
+v0.5.0では`breakableLines(source, name?)`、`requestPause()`、`cancelPause()`を追加しました。`breakableLines`は、渡したソースについてブレークポイントを置ける行を、入れ子の関数を含めて返します。ソースは実行しません。`requestPause`は、実行していないVMへ「次に実行する行で止まる」予約を置きます。Vehicle作成時の`pausePoll`は、実行中のVMが4096命令ごとに呼ぶ関数で、trueを返すと実行を中断します。
+
+modeはcontinue／into／over／outです。`resume`のオプション`carryToNextEntry`を指定すると、ステップがコールバックの終わりを越えたときに、次のコールバックの最初の行で止まります。watchの評価は副作用を伴う明示的な操作です。localsとtableのraw検査ではユーザーmetamethodを実行しません。デバッグtable handleはVMと停止世代に紐づき、resume／watch／reload後に使い回せません。[詳細](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/docs/specs/debugger.md)
 
 ## 値と保存ヘルパー
 
@@ -91,6 +111,8 @@ modeはcontinue／into／over／outです。watchの評価は副作用を伴う�
 
 raw statusの0はcompleted、7はsuspended、8はmissingです。JSの引数検証や配送先の例外は、この表の番号だけに正規化されるとは限りません。
 
+スクリプトの読み込みと実行で失敗したエラーは、メッセージとは別に位置情報を持つ場合があります。TypeScriptでは`EngineError.detail`で、省略されていないチャンク名と行、呼び出し履歴、構文エラーと実行時エラーの区別を受け取ります。結果コードの名前付き定数は`STATUS`として公開しています。Rustでは`VmError.trace`で受け取ります。
+
 ## 環境とホスト拡張
 
 `game`と`extended`はVehicle/Addonの区別とは別です。`onLog`は配送先だけを指定し、printを有効化しません。任意の標準関数置換・独自関数・値はextendedの`bindings`で初期化前に指定します。reset/reloadでも同じ設定を再適用します。[利用例と制約](/storm-lua-engine/environments)。
@@ -104,11 +126,11 @@ raw statusの0はcompleted、7はsuspended、8はmissingです。JSの引数検�
 
 `/compiler`の`Compiler.minify`、`build`、`buildLifeboat`は`sourceMap:true`に対応します。返された`code`と`map`を`Compiler.validateSourceMap(code,map)`へ渡すと、`OptimizationMap`を取得します。`/compiler-worker`の`CompilerWorkerClient`も同じ操作をPromiseで返します。
 
-v0.4.0の拡張形式は`x_storm.schemaVersion: 2`です。`validateSourceMap`はschema 1を拒否し、schema 2のトークン表を展開して正規化した`mappings`・`origins`を返します。保存形式の配列を直接読む代わりに、この検証結果を利用してください。[0.4への移行](/storm-lua-engine/migration-0-4)も参照してください。
+v0.5.0の拡張形式は`x_storm.schemaVersion: 2`です。`validateSourceMap`はschema 1を拒否し、schema 2のトークン表を展開して正規化した`mappings`・`origins`を返します。保存形式の配列を直接読む代わりに、この検証結果を利用してください。[0.5への移行](/storm-lua-engine/migration-0-5)と[0.4への移行](/storm-lua-engine/migration-0-4)も参照してください。
 
 `OptimizationMap`、`OptimizationOrigin`、`OptimizationMapping`、`OptimizationReason`、`OriginRelation`などの型は`/compiler`から利用できます。`map`はJSON文字列、詳細範囲は半開UTF-8バイト区間です。標準mapの位置はUTF-16列なので、エディタの位置形式と区別してください。[利用手順](/storm-lua-engine/source-maps)。
 
 
 ## Addonビルドとmetadata
 
-`Compiler.buildAddon(project, {environment, metadataTag})`は非短縮のinclude-onceリンクです。`CompilerWorkerClient.buildAddon`でも同じ操作を利用できます。Vehicleの最適化・targetSize・property特殊化は受理しません。通常の`build`と`buildLifeboat`には`ProjectCompileOptions.metadataTag`を追加し、元位置とmapのsourcesContentを保持して先頭の明示metadata commentを除去できます。
+`Compiler.buildAddon(project, {environment, metadataTag})`は非短縮のinclude-onceリンクです。`Compiler.buildComponent(project, {environment, metadataTag})`はComponent Mod向けの同じ形のリンクで、最適化は行いません。`CompilerWorkerClient.buildAddon`でも同じ操作を利用できます。Vehicleの最適化・targetSize・property特殊化は受理しません。通常の`build`と`buildLifeboat`には`ProjectCompileOptions.metadataTag`を追加し、元位置とmapのsourcesContentを保持して先頭の明示metadata commentを除去できます。

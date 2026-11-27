@@ -149,6 +149,7 @@
               "storm-lua-engine/compiler",
               "storm-lua-engine/source-maps",
               "storm-lua-engine/addons",
+              "storm-lua-engine/component",
               "storm-lua-engine/host-services",
               "storm-lua-engine/snapshot-continuation"
             ]
@@ -157,6 +158,7 @@
             "group": "リファレンス",
             "pages": [
               "storm-lua-engine/api-reference",
+              "storm-lua-engine/migration-0-5",
               "storm-lua-engine/migration-0-4",
               "storm-lua-engine/migration-0-2"
             ]

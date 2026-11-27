@@ -1,0 +1,62 @@
+---
+title: "0.5への移行"
+description: "実ゲームに合わせた挙動変更、実行制限とエラーモデルの見直し"
+---
+
+v0.5.0ではVMコアの意味論を実ゲームの仕様へ合わせ、第3のプロファイルとしてComponent Modと、VMのスナップショット／継続を追加しました。実行制限とエラーの扱いが変わるため、旧版から更新するときは、ホストの制限設定とエラー処理を確認してください。
+
+0.4.0から更新する場合は本ページを、0.1.0から更新する場合は[0.2での変更](/storm-lua-engine/migration-0-2)と[0.4への移行](/storm-lua-engine/migration-0-4)も確認してください。
+
+## SDKを同じ版へ揃える
+
+JavaScript・型定義・runtime/raster/compilerのWASMをv0.5.0へ揃えてください。RustのGit依存も`v0.5.0`を指定します。導入方法は[利用をはじめる](/storm-lua-engine/getting-started)を参照してください。
+
+独自配信のJSアダプタ、Workerから読み込むWASM、WorkerやService Workerのキャッシュも更新します。異なる版の生成側と読み取り側を組み合わせないでください。
+
+## 実行制限の見直し（Rust）
+
+Rustの`ExecutionLimits`は、各項目が`Option`になりました。既定で有効なのは壁時計1001msの時間制限だけで、命令数・Luaメモリ・ソース長の上限は、明示した場合だけ効きます。
+
+従来の既定（命令数100万、Luaメモリ8MiB）に依存していたホストは、上限を明示してください。壁時計の超過は実ゲームと同じ文面のLuaエラーになります。
+
+WASM／TypeScript SDKでは従来どおり、命令数100万・Luaメモリ8MiBの上限が既定で適用されます。SDKのオプションで変更できます。
+
+## エラーの扱いの見直し
+
+通常のLuaエラーでは、VMは失敗状態にならなくなりました。Vehicleはステータス（`onDraw`=1、`onTick`=2、ロード=3、`httpReply`=5）と最大11件のエラーリングを保持し、エラー中は`onTick`と`onDraw`をスキップする一方で、`httpReply`は配送を続けます。Addonはステータス（`onTick`=2、ロード=3、それ以外=5）を保持し、ステータス5は報告後のtickで自動復帰します。
+
+「失敗したらVMを作り直す」前提のホストは、新しい回復モデルに合わせて見直してください。
+
+Rustで`VmError`または`BridgeError`をstruct literalで構成している場合は、追加したフィールド（`trace`、`detail`）を指定する必要があります。`VmError::new`と`BridgeError::new`の呼び出しは変更不要です。エラーには位置情報が付き、Rustは`VmError.trace`、TypeScriptは`EngineError.detail`で受け取ります。
+
+## Luaスクリプトの挙動変更
+
+| 項目 | v0.5.0での扱い |
+| --- | --- |
+| phaseエラー | 呼べないphaseで呼んだ`input`、`output`、`screen`の関数が、実ゲームと同じ文面のLuaエラーになります。対象は`onDraw`実行中の`input.*`と`output.*`、`onTick`実行中の`screen.*`で、トップレベルと`httpReply`での呼び出しも含みます。従来は読み出しが0または`false`を返し、書き込みと描画は無視されていました |
+| `math.random` | Gameプロファイルの既定が、ホストスレッドで共有するCRT互換ストリームになりました。VMごとの決定的な列は`deterministic_random`オプションで選びます |
+| `select`／`string.dump` | VehicleとAddonの環境から`select`を除きました（baseは6関数）。`string`ライブラリは完全版になり、`string.dump`が戻っています |
+| `screen.getWidth`／`getHeight` | 戻り値がLua整数からdoubleになりました |
+| `screen.drawMap` | 1フレームに1回までになりました。2回目以降は引数を読む前に無言で戻ります |
+| 色の変換 | `setColor`と`setMapColor*`の成分は、クランプせず下位8bitへラップします。NaN・非有限・範囲外と非数値は0になり、エラーにはなりません |
+| HTTPの検証 | VehicleとAddonのHTTP検証を外しました。ポートは符号付き整数の下位16bitとして扱い、リクエストはそのまま保持します。未処理件数の上限と返信の1MiB上限も外しました |
+| `debug.log` | 引数1個で文字列のときだけ記録します。それ以外は無言で何もしません。行・件数・総量の上限とエラー化も外しました |
+
+このほかに、`map.screenToMap`／`map.mapToScreen`と`matrix.rotationToFaceXZ`を追加しました。コンパイラの診断`input-outside-ontick`と`output-outside-ontick`が、phaseエラーの対象になる呼び出しを事前に報告します。
+
+## Addonホストの見直し
+
+プロパティ宣言の検証をやめました。sliderの範囲・刻み・defaultの有限性や範囲、名前の長さと件数の予算、同名で定義が異なる場合の競合はエラーにならず、宣言値をそのまま保持します。再宣言は最後の宣言が有効です。ホストが設定するoverride値の検証は従来どおり行います。宣言エラーに依存していたホストは、この前提へ見直してください。
+
+`HttpError::Invalid`はリクエスト検証の用途を失いましたが、Variantは削除していません。不正な継続カーソルを表す用途に変わっています。この値でリクエストの不正を判定していたホストは、判定方法を見直してください。
+
+Addonの継続形式はSLADDON v2になりました。v1形式のデータは明示的に拒否します。旧版で取得したAddon継続データをv0.5.0で読み込むことはできません。
+
+## 新機能
+
+移行作業は要りませんが、v0.5.0で追加した主な機能です。
+
+- Component Modプロファイル（[Component Modの組み込み](/storm-lua-engine/component)）
+- VMのスナップショットと継続（[スナップショットと継続](/storm-lua-engine/snapshot-continuation)）
+- デバッガの`breakableLines`と`requestPause`、エラーへの位置情報（[API一覧](/storm-lua-engine/api-reference)）
+- プロパティを1件だけ設定・削除する`setProperty`と`removeProperty`

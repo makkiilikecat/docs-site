@@ -6,10 +6,10 @@ description: "Stormworks向けLuaの実行・描画・解析・最適化を組�
 Storm Lua EngineはLuaの実行、Vehicle/Addonのホスト境界、描画、デバッグ、解析・ビルド・最適化をアプリへ組み込むためのSDKです。必要な機能だけを明示的に初期化して使用します。
 
 <Warning>
-このガイドはv0.4.0に対応します。Source Mapの拡張情報はschema 2へ変わり、ロード時に不正となるソースはコンパイル時に拒否されます。更新時は[0.4への移行](/storm-lua-engine/migration-0-4)を確認してください。0.1.0から更新する場合は[0.2への移行](/storm-lua-engine/migration-0-2)も参照してください。
+このガイドはv0.5.0に対応します。第3のプロファイルとしてComponent Modが加わり、実行制限とエラーの扱いは実ゲームのモデルへ変わりました。更新時は[0.5への移行](/storm-lua-engine/migration-0-5)を確認してください。0.1.0から更新する場合は[0.2への移行](/storm-lua-engine/migration-0-2)も参照してください。
 </Warning>
 
-v0.4.0では最適化時に数値や文字列、評価順序などを正しく扱うよう修正し、コンパイル性能も改善しました。安全に適用できる条件に限って最適化したことで、短縮後の文字数が以前より増える場合があります。
+v0.5.0ではVMコアの意味論を実ゲームの仕様へ合わせました。呼べないphaseで呼んだ関数はLuaエラーになり、通常のLuaエラーではVMは失敗状態にならず、エラーはステータスと最大11件のエラーリングに記録されます。VMのスナップショットと継続、デバッガの`breakableLines`と`requestPause`も追加しました。
 
 ## 使い分け
 
@@ -17,7 +17,7 @@ v0.4.0では最適化時に数値や文字列、評価順序などを正しく�
 | --- | --- |
 | Luaを短縮してゲームへ持ち出す | [StormMin](/stormmin/index)のCLI/Web |
 | SDKに何ができるか直接試す | [Storm Lua Engine: Playground](/storm-lua-engine/playground) |
-| 自分のRustアプリへ組み込む | syntax/analysis/minify/build、microcontroller/addon、rasterの必要なクレート |
+| 自分のRustアプリへ組み込む | syntax/analysis/minify/build、microcontroller/addon/component、rasterの必要なクレート |
 | 自分のTypeScriptアプリへ組み込む | SDK本体と、`/compiler`、`/raster`、`/compiler-worker`などの公開エントリーポイント |
 
 StormMinは引き続き独立したCLI/Webです。Playgroundはその後継や置き換えではなく、同じSDKを使う確認用アプリです。
@@ -42,7 +42,7 @@ Addonの`server`は、ホストが実装する同期関数群です。独自の�
 
 単一ソースとプロジェクトで、既知の非対応関数の判定を共有します。編集時は警告、ゲーム向け生成ではエラーです。`_ENV`の動的アクセスやextended環境は、名前・トークン・行番号を維持する字句短縮になります。`conservative-minification`と`search.mode: "lexical"`で確認できます。
 
-解析・最適化の対象はVehicleです。Addonの解析・最適化には対応しておらず、明示的に拒否します。Addonの非短縮リンクには専用の`buildAddon`を使用できます。
+解析・最適化の対象はVehicleです。Addonの解析・最適化には対応しておらず、明示的に拒否します。Addonの非短縮リンクには専用の`buildAddon`を、Component Modの非短縮リンクには`buildComponent`を使用できます。
 
 ## ブラウザから使う
 

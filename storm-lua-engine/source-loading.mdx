@@ -4,7 +4,7 @@ description: "開発実行用のソースローダー、ファイル単位のデ
 ---
 
 <Note>
-このページはv0.4.0に対応します。`requireLoader`と完了済みloadの全履歴を再実行するresetはv0.2.0から利用できます。0.1.0では利用できません。
+このページはv0.5.0に対応します。`requireLoader`と完了済みloadの全履歴を再実行するresetはv0.2.0から利用できます。0.1.0では利用できません。
 </Note>
 
 ## 読み込み方式の選択
@@ -27,7 +27,7 @@ description: "開発実行用のソースローダー、ファイル単位のデ
 
 ブラウザでは、実行前に必要なソースを実行Workerのメモリへ渡す構成が使えます。同期コールバックからPromiseを返したり、その中で同じ`vm.load()`へ再入したりしないでください。
 
-Nodeでそのまま実行できる例は[source-loading.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/examples/consumer/source-loading.mjs)にあります。パッケージを隔離インストールした環境でも実行検証しています。
+Nodeでそのまま実行できる例は[source-loading.mjs](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/examples/consumer/source-loading.mjs)にあります。パッケージを隔離インストールした環境でも実行検証しています。
 
 ## Rustでソースを供給する
 
@@ -88,7 +88,7 @@ Compiler SDKの`build()`は静的なモジュール値・ambientの契約を持�
 
 単一ソースとして開発コードをminifyする場合は、extended環境と`hostBindings:["require"]`を指定できます。この場合は字句短縮になり、requireは実行時に残ります。ゲーム向けの結合済み成果物になったという意味ではありません。
 
-v0.4.0のコンパイラは、Luaのロード時にエラーになるソースをコンパイル時に拒否します。最適化で不正な箇所が消えることを前提にしないでください。[Compiler](/storm-lua-engine/compiler)と[0.4への移行](/storm-lua-engine/migration-0-4)を参照してください。
+コンパイラは、Luaのロード時にエラーになるソースをコンパイル時に拒否します。最適化で不正な箇所が消えることを前提にしないでください。[Compiler](/storm-lua-engine/compiler)と[0.4への移行](/storm-lua-engine/migration-0-4)を参照してください。
 
 ## 上限と安全性
 
