@@ -4,7 +4,7 @@ description: "イベント・ホストserver・保存と再初期化"
 ---
 
 <Note>
-このページはv0.4.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
+このページはv0.5.0に対応します。ソース・型定義・WASMを同じ版に揃えて使用してください。
 </Note>
 
 ## ホストとエンジンの担当
@@ -33,11 +33,13 @@ TSのホスト関数は`(...args: LuaValue[]) => readonly LuaValue[]`です。�
 
 ホスト関数は**同期**です。Promiseは拒否します。外部データの取得が必要なら、先に取得したsnapshotを同期的に返すか、HTTPの要求・返信APIを使用します。同じWASM moduleへの再入も禁止です。ホスト関数内でイベントが発生した場合は、関数の戻り値を返した後に、アプリ側のイベントキューからdispatchしてください。
 
-Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`と`VmError`を使うだけでよく、通常のホスト実装にmlua型は必要ありません。[Rust例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/conformance/examples/addon_host.rs)
+Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`と`VmError`を使うだけでよく、通常のホスト実装にmlua型は必要ありません。[Rust例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/conformance/examples/addon_host.rs)
 
 ## プロパティと保存・復元
 
 新規ワールドは`newWorld: true`、既存ワールドは`newWorld: false`と`savedata`を指定します。`property.checkbox`／`property.slider`は新規ワールドの設定値を返し、既存ワールドではnilを返す契約です。UIに必要な宣言は`menuProperties()`から取得できます。
+
+v0.5.0ではプロパティ宣言の検証を行いません。sliderの範囲・刻み・defaultの有限性や範囲、名前の長さと件数の予算、同名で定義が異なる場合の競合はエラーにならず、宣言値をそのまま保持します。同名の再宣言は最後の宣言が有効です。ホストが設定するoverride値の検証は従来どおり行います。
 
 既存ワールドでは、トップレベルが終了した後、`start()`より前に保存した`g_savedata`を適用します。トップレベルで書かれた初期値が保存済みデータを上書きしない順序です。トップレベルで古いテーブルへの参照をローカル変数に保持した場合、その参照まで書き換えません。[ゲーム内ヘルプ原文](https://wikiwiki.jp/sbarjp/アドオンLua/Misc)
 
@@ -49,9 +51,9 @@ Rustでは`AddonConfig.server`に`HostFunction`を登録します。`LuaValue`�
 
 通常の終了時に`onDestroy`が必要なら`destroy()`を実行し、必要な最終checkpointを取り、最後に`dispose()`します。disposeはスクリプトを勝手に実行しません。
 
-通常のLuaエラーは呼び出し元へ返し、その後のonTickを停止します。同じVMの保存状態を保持し、onCreate・通常イベント・onDestroyを配送できます。loadがLuaエラーになった場合も既存checkpointを復元してstartへ進めます。命令数・メモリ制限やホスト境界の失敗では、新規VMまたは保存済みcheckpointからのreloadで復旧します。実行前から持っていたcheckpointも保持してください。ホストが既に実行したワールド変更や外部I/Oは自動ロールバックされません。
+通常のLuaエラーは呼び出し元へ返し、実ゲームのエラーステータス（onTick失敗=2、ロード失敗=3、それ以外のコールバック失敗=5）と最大11件のエラーリングへ記録します。ステータスが0でない間はonTickをスキップしますが、同じVMの保存状態を保持し、onCreate・通常イベント・onDestroyは配送できます。ステータス5は報告後のtickで自動的にクリアされ、onTickが再開します。ステータス2と3はreloadまで残ります。状態はRustの`error_status`／`error_log`で参照できます。loadがLuaエラーになった場合も既存checkpointを復元してstartへ進めます。命令数・メモリ制限やホスト境界の失敗では、新規VMまたは保存済みcheckpointからのreloadで復旧します。実行前から持っていたcheckpointも保持してください。ホストが既に実行したワールド変更や外部I/Oは自動ロールバックされません。
 
-完全な実行例は[Node利用例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/examples/consumer/node.mjs)にあります。厳密な対応範囲・限界は[Addon仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/docs/specs/addon.md)にまとめています。
+完全な実行例は[Node利用例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/examples/consumer/node.mjs)にあります。厳密な対応範囲・限界は[Addon仕様](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/docs/specs/addon.md)にまとめています。
 
 ## 開発用の複数ファイル
 

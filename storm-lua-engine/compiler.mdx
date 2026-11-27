@@ -4,7 +4,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 ---
 
 <Note>
-このページはv0.4.0に対応します。0.1.0にはCompiler SDKは含まれません。対応するソース・型定義・WASMを同じ版で使用してください。
+このページはv0.5.0に対応します。0.1.0にはCompiler SDKは含まれません。対応するソース・型定義・WASMを同じ版で使用してください。
 </Note>
 
 ## 操作の選択
@@ -15,6 +15,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 | `build` | 論理プロジェクトとビルド設定 | 単一Lua、標準map、短縮時は明示指定で理由付きmap |
 | `minify` | 単一Luaと最適化設定 | 短縮Lua、診断、適用条件、明示指定の理由付きmap |
 | `buildAddon` | Addonのinclude-onceプロジェクト | 非短縮Lua、元ソース入りmap、診断 |
+| `buildComponent` | Component Modのinclude-onceプロジェクト | 非短縮Lua、元ソース入りmap、診断 |
 | `buildLifeboat` | include-once方式のプロジェクト | 単一Luaと明示指定の理由付きmap |
 | `validateSourceMap` | 生成Luaとmap文字列 | 検証済みOptimizationMap。不正なら例外 |
 | `scanProperties` | 単一Lua | 静的に名前が分かるproperty参照 |
@@ -23,7 +24,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 
 いずれもLuaを実行しません。ファイルを読み込んだり、VMを作ったり、ゲームのtickを進めたりする処理も含みません。`passMetadata()`の件数と登録パス総数は同じではありません。
 
-`minify`、通常の`build`、`analyze`の対象はVehicleです。`target: "addon"`は拒否します。Addonの非短縮リンクには専用の`buildAddon`を使用します。Addon最適化と全server APIの解析は提供しません。
+`minify`と通常の`build`の対象はVehicleです。Addonの非短縮リンクには専用の`buildAddon`を、Component Modの非短縮リンクには`buildComponent`を使用します。Addon最適化と全server APIの解析は提供しません。解析にはComponentプロファイル向けの診断経路があります。
 
 ## 論理プロジェクト
 
@@ -39,7 +40,7 @@ description: "Luaソースを解析し、単一ファイルへ構築・短縮す
 
 これらは同期的で、ファイルシステムやLua VMを必要としません。通常のホストは上位APIを使い、明示的な候補処理が必要な場合だけ`storm-lua-minify`を参照します。ASTを直接作る低レベル利用者は、ノードIDと構造の契約を守る必要があります。
 
-[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.4.0/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
+[Nativeの実行例](https://github.com/Stormcat-Works/storm-lua-engine/blob/v0.5.0/conformance/examples/compiler.rs)は、2モジュールをビルドし、生成物を明示的にVehicleへロードして出力を確認します。利用アプリがconformanceクレートへ依存する必要はありません。
 
 ## TypeScriptから使用する
 
@@ -56,6 +57,8 @@ Nodeでは選択したWASMファイルをホスト側で読み込み、`wasmBina
 コンパイル成功と目標文字数達成は別です。`ok`、`diagnostics`、`code`、`size`、`search.targetMet`を確認し、ホストが表示・保存・エクスポートの可否を判断します。文字数未達を構文エラーへ置き換えることはありません。
 
 v0.4.0では、Luaのロード時にエラーとなるソースを最適化で受理可能な形に変換せず、コンパイル時に拒否します。非vararg関数内の`...`など、旧版で受理されていた入力もエラーになる場合があります。再帰的な構文解析の深さが128段、構文木の深さが256段を超えるソースも、Native/WASMの両方で構文診断を返します。
+
+v0.5.0では呼べないphaseの呼び出しをコンパイラの診断でも報告します。`onDraw`実行中の`input.*`は`input-outside-ontick`、`output.*`は`output-outside-ontick`です。実行時にはトップレベルと`httpReply`を含め、これらの呼び出しは実ゲームと同じ文面のLuaエラーになります。
 
 `numericMode: "exact"`と`"tolerant"`は数値変換の契約です。`mode:"safe"`を指定することとexactを指定することは同義ではありません。`assumptions`、`disabledPasses`、`propertyMode`などの結果も確認してください。
 
@@ -93,5 +96,9 @@ v0.4.0では、数値リテラル・Luaのbyte文字列・評価順序・スコ�
 `metadataTag`は、指定した先頭行を持つ先頭のlong commentだけを除去します。通常の`build`と`buildLifeboat`でも指定できます。元のbyte位置・改行を保持し、mapの`sourcesContent`には元metadataを含めます。ゲームへ提出するLuaの出力と、元ソース入りmapを共有するかどうかは別々に判断してください。
 
 v0.4.0では、`metadataTag`・`minify:false`・`sourceMap:true`を同時に指定した通常ビルドまたはLifeBoatビルドで、map検証に失敗する不具合も修正しました。
+
+## Component Modの非短縮ビルド
+
+`compiler.buildComponent(project, {environment: "game"})`で、Component Modのincludeを一つの読みやすいLuaへリンクします。Addonと同じくinclude-once方式で、最適化（短縮化）は行いません。対象プロファイルの詳細は[Component Modの組み込み](/storm-lua-engine/component)を参照してください。
 
 Addonのgame環境では`select`を提供しません。自分で定義した関数とnil/typeによる存在検査は維持し、開発用途には`extended`を明示できます。
