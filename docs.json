@@ -149,7 +149,8 @@
               "storm-lua-engine/compiler",
               "storm-lua-engine/source-maps",
               "storm-lua-engine/addons",
-              "storm-lua-engine/host-services"
+              "storm-lua-engine/host-services",
+              "storm-lua-engine/snapshot-continuation"
             ]
           },
           {
